@@ -3,9 +3,7 @@ import { Paper, styled } from '@mui/material';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import HomeIcon from '@mui/icons-material/Home';
-import SavingsIcon from '@mui/icons-material/Savings';
 import AddIcon from '@mui/icons-material/Add';
-import HistoryIcon from '@mui/icons-material/History';
 import MenuIcon from '@mui/icons-material/Menu';
 
 const Navigation = styled(Box)(({ theme }) => ({
@@ -25,16 +23,11 @@ function HomeNavbar() {
                 <IconButton onClick={() => navigate('/home')}>
                     <HomeIcon />
                 </IconButton>
-                <IconButton onClick={() => navigate('/savings')}>
-                    <SavingsIcon />
-                </IconButton>
-                <IconButton onClick={() => navigate('/add')}>
+                {/* TODO: Possibly highlight, tooltip, if user has no account */}
+                <IconButton onClick={() => navigate('/create')}>
                     <AddIcon />
                 </IconButton>
-                <IconButton onClick={() => navigate('/history')}>
-                    <HistoryIcon />
-                </IconButton>
-                <IconButton onClick={() => navigate('/menu')}>
+                <IconButton onClick={() => navigate('/')}>
                     <MenuIcon />
                 </IconButton>
             </Navigation>

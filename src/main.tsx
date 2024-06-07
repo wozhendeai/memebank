@@ -10,6 +10,7 @@ import {baseGoerli, base} from 'viem/chains';
 // Pages
 import LandingPage from './pages/LandingPage/LandingPage.tsx';
 import HomePage from './pages/HomePage/HomePage.tsx';
+import CreateAccountPage from './pages/CreateAccountPage/CreateAccountPage.tsx';
 
 const router = createBrowserRouter([
   {
@@ -19,6 +20,10 @@ const router = createBrowserRouter([
   {
     path: "/home",
     element: <HomePage />
+  },
+  {
+    path: "/create",
+    element: <CreateAccountPage />
   }
 ]);
 
