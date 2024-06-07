@@ -1,69 +1,81 @@
 import { usePrivy } from '@privy-io/react-auth';
 import { useNavigate } from 'react-router-dom';
-import {
-  Container, Box, Typography, Button, ButtonGroup, Grid, Paper, IconButton,
-} from '@mui/material';
+import Container from '@mui/material/Container';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Button from '@mui/material/Button';
+import ButtonGroup from '@mui/material/ButtonGroup';
+import Grid from '@mui/material/Grid';
+import Paper from '@mui/material/Paper';
 import { styled } from '@mui/system';
-import HomeIcon from '@mui/icons-material/Home';
-import SavingsIcon from '@mui/icons-material/Savings';
-import AddIcon from '@mui/icons-material/Add';
-import HistoryIcon from '@mui/icons-material/History';
-import MenuIcon from '@mui/icons-material/Menu';
+import { LinePlot } from '@mui/x-charts/LineChart';
+import { ResponsiveChartContainer } from '@mui/x-charts';
 import TravelIcon from '@mui/icons-material/FlightTakeoff';
-import InsuranceIcon from '@mui/icons-material/LocalHospital';
+import HomeNavbar from '../../components/HomeNavbar/HomeNavbar';
 
 const Root = styled(Container)(({ theme }) => ({
-  height: '100vh',
+  minHeight: '100vh',
   backgroundColor: '#F0F2F5',
   display: 'flex',
   flexDirection: 'column',
   justifyContent: 'space-between',
   paddingTop: theme.spacing(4),
   paddingBottom: theme.spacing(4),
+  boxSizing: 'border-box',
 }));
 
-const Content = styled(Box)(() => ({
+// TODO: Better CSS for content & route, problem was cards overflowing
+const Content = styled(Box)(({ theme }) => ({
   flexGrow: 1,
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
   width: '100%',
   boxSizing: 'border-box',
+  paddingBottom: theme.spacing(8),
 }));
 
 const GraphContainer = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(2),
+  padding: 0,
   margin: theme.spacing(2, 0),
   width: '100%',
+  height: 300,
   boxSizing: 'border-box',
+  overflow: 'hidden',
 }));
 
 const GoalCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
-  margin: theme.spacing(2),
+  margin: theme.spacing(1),
   textAlign: 'left',
   display: 'flex',
   flexDirection: 'column',
   justifyContent: 'space-between',
   boxSizing: 'border-box',
-  height: '180px', // Increased card height
+  height: 'auto',
+  flexGrow: 1,
+  flexBasis: 'calc(50% - 32px)',
+  [theme.breakpoints.down('sm')]: {
+    flexBasis: 'calc(100% - 32px)',
+  },
 }));
 
-const Navigation = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  justifyContent: 'space-around',
-  padding: theme.spacing(1),
-  backgroundColor: '#fff',
-}));
+const data = [
+  { month: 'Jan', value: 5000 },
+  { month: 'Feb', value: 6000 },
+  { month: 'Feb2', value: 6000 },
+  { month: 'Mar', value: 7000 },
+  { month: 'Apr', value: 7000 },
+  { month: 'May', value: 8000 },
+  { month: 'Jun', value: 8000 },
+];
 
 const HomePage = () => {
   const { ready, authenticated } = usePrivy();
   const navigate = useNavigate();
 
-  // Do nothing while the PrivyProvider initializes with updated user state
   if (!ready) return <></>;
 
-  // Redirect unauthenticated users to homepage
   if (!authenticated) {
     navigate('/', { replace: true });
     return null;
@@ -72,21 +84,61 @@ const HomePage = () => {
   return (
     <Root>
       <Content>
+        {/* "Your Savings" Header */}
         <Box width="100%" textAlign="left" mb={2}>
           <Typography variant="subtitle2" color="textSecondary">
             Your savings
           </Typography>
-          <Typography variant="h4" color="green"> {/* Decreased text size */}
+          <Typography variant="h4" color="green">
             $62,988
           </Typography>
           <Typography variant="subtitle2" color="textSecondary">
             This month you’ve saved $2,899 so far. <span style={{ color: 'green' }}>(25% more than last month)</span>
           </Typography>
         </Box>
+        {/* Savings Graph */}
         <GraphContainer>
-          {/* Insert your graph component here */}
-          <Typography variant="h6">Graph Placeholder</Typography>
+          <ResponsiveChartContainer
+            series={[
+              {
+                type: 'line',
+                data: data.map(item => item.value),
+                showMark: false,
+              },
+            ]}
+            xAxis={[
+              {
+                data: data.map(item => item.month),
+                scaleType: 'band',
+                id: 'x-axis-id',
+              },
+            ]}
+            yAxis={[
+              {
+                scaleType: 'linear',
+              },
+            ]}
+            margin={{ top: 20, right: 0, bottom: 20, left: 0 }}
+            sx={{
+              width: '100%',
+              height: '100%',
+              '& .MuiLineElement-root': {
+                strokeWidth: 2,
+                stroke: '#6a0dad',
+                strokeLinecap: 'round',
+              },
+              '& .MuiChartsXAxis-root, & .MuiChartsYAxis-root': {
+                display: 'none',
+              },
+              '& .MuiChartsTooltip-root': {
+                display: 'none',
+              },
+            }}
+          >
+            <LinePlot />
+          </ResponsiveChartContainer>
         </GraphContainer>
+        {/* Graph Buttons */}
         <Box width="100%" mb={2} display="flex" justifyContent="center">
           <ButtonGroup fullWidth variant="outlined">
             <Button sx={{ flex: 1 }}>1M</Button>
@@ -95,49 +147,27 @@ const HomePage = () => {
             <Button sx={{ flex: 1 }}>1Y</Button>
           </ButtonGroup>
         </Box>
-        <Box width="100%" textAlign="left" mb={2}>
+
+        {/* "Your Accounts" Header */}
+        <Box width="100%" textAlign="left" mb={1}>
           <Typography variant="h6" fontWeight="bold">
             Your accounts
           </Typography>
         </Box>
-        <Grid container spacing={2}>
+        {/* Accounts Cards */}
+        <Grid container spacing={1} style={{ margin: 0, width: '100%' }}>
           <Grid item xs={12} sm={6}>
             <GoalCard>
               <TravelIcon style={{ fontSize: 40 }} />
               <Typography variant="h6">Travelling</Typography>
-              <Typography variant="h5">$2,398</Typography> {/* Decreased text size */}
+              <Typography variant="h5">$2,398</Typography>
               <Typography variant="body2" color="textSecondary">+ $223 this month</Typography>
             </GoalCard>
           </Grid>
-          <Grid item xs={12} sm={6}>
-            <GoalCard>
-              <InsuranceIcon style={{ fontSize: 40 }} />
-              <Typography variant="h6">Insurance</Typography>
-              <Typography variant="h5">$12,090</Typography> {/* Decreased text size */}
-              <Typography variant="body2" color="textSecondary">+ $411 this month</Typography>
-            </GoalCard>
-          </Grid>
-          {/* Add more GoalCards here as needed */}
         </Grid>
       </Content>
-      {/* Footer */}
-      <Navigation>
-        <IconButton onClick={() => navigate('/home')}>
-          <HomeIcon />
-        </IconButton>
-        <IconButton onClick={() => navigate('/savings')}>
-          <SavingsIcon />
-        </IconButton>
-        <IconButton onClick={() => navigate('/add')}>
-          <AddIcon />
-        </IconButton>
-        <IconButton onClick={() => navigate('/history')}>
-          <HistoryIcon />
-        </IconButton>
-        <IconButton onClick={() => navigate('/menu')}>
-          <MenuIcon />
-        </IconButton>
-      </Navigation>
+
+      <HomeNavbar />
     </Root>
   );
 };
