@@ -1,16 +1,17 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import {PrivyProvider} from '@privy-io/react-auth';
+import { PrivyProvider } from '@privy-io/react-auth';
 import {
   createBrowserRouter,
   RouterProvider,
 } from "react-router-dom";
-import {baseGoerli, base} from 'viem/chains';
+import { baseGoerli, base } from 'viem/chains';
 
 // Pages
 import LandingPage from './pages/LandingPage/LandingPage.tsx';
 import HomePage from './pages/HomePage/HomePage.tsx';
 import CreateAccountPage from './pages/CreateAccountPage/CreateAccountPage.tsx';
+import { createTheme, ThemeProvider } from '@mui/material';
 
 const router = createBrowserRouter([
   {
@@ -27,6 +28,9 @@ const router = createBrowserRouter([
   }
 ]);
 
+const theme = createTheme({
+});
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <PrivyProvider
@@ -36,7 +40,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         loginMethods: ['wallet'],
         // Customize Privy's appearance in your app
         appearance: {
-          walletList: ['coinbase_wallet'], 
+          walletList: ['coinbase_wallet'],
           theme: 'light',
           accentColor: '#676FFF',
           logo: '',
@@ -45,16 +49,18 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         embeddedWallets: {
           createOnLogin: 'all-users',
         },
-        externalWallets: { 
-          coinbaseWallet: { 
+        externalWallets: {
+          coinbaseWallet: {
             // Valid connection options include 'eoaOnly' (default), 'smartWalletOnly', or 'all'
-            connectionOptions: 'smartWalletOnly', 
-          }, 
+            connectionOptions: 'smartWalletOnly',
+          },
         },
         supportedChains: [baseGoerli, base]
       }}
     >
-      <RouterProvider router={router} />
+      <ThemeProvider theme={theme}>
+        <RouterProvider router={router} />
+      </ThemeProvider>
     </PrivyProvider>
   </React.StrictMode>,
 )
