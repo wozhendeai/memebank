@@ -1,11 +1,12 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { PrivyProvider } from '@privy-io/react-auth';
+import { WagmiProvider } from 'wagmi';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   createBrowserRouter,
   RouterProvider,
 } from "react-router-dom";
-import { baseGoerli, base } from 'viem/chains';
+import { config } from './wagmi.ts'
 
 // Pages
 import LandingPage from './pages/LandingPage/LandingPage.tsx';
@@ -28,39 +29,17 @@ const router = createBrowserRouter([
   }
 ]);
 
-const theme = createTheme({
-});
+const theme = createTheme();
+const queryClient = new QueryClient();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <PrivyProvider
-      appId="clw5b3jae0fe3358lgosj6b6z"
-      config={{
-        // Display email and wallet as login methods
-        loginMethods: ['wallet'],
-        // Customize Privy's appearance in your app
-        appearance: {
-          walletList: ['coinbase_wallet'],
-          theme: 'light',
-          accentColor: '#676FFF',
-          logo: '',
-        },
-        // Create embedded wallets for ALL users
-        embeddedWallets: {
-          createOnLogin: 'all-users',
-        },
-        externalWallets: {
-          coinbaseWallet: {
-            // Valid connection options include 'eoaOnly' (default), 'smartWalletOnly', or 'all'
-            connectionOptions: 'smartWalletOnly',
-          },
-        },
-        supportedChains: [baseGoerli, base]
-      }}
-    >
-      <ThemeProvider theme={theme}>
-        <RouterProvider router={router} />
-      </ThemeProvider>
-    </PrivyProvider>
-  </React.StrictMode>,
+    <WagmiProvider config={config}>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={theme}>
+          <RouterProvider router={router} />
+          </ThemeProvider>
+      </QueryClientProvider>
+  </WagmiProvider>
+  </React.StrictMode >,
 )

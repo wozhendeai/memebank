@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Container, Box, Typography, Paper, TextField, Button, InputAdornment, Modal } from '@mui/material';
 import { styled } from '@mui/system';
 import { SvgIconComponent } from '@mui/icons-material';
-import { useWallets } from '@privy-io/react-auth';
 
 const Root = styled(Container)(({ theme }) => ({
     minHeight: '100vh',
@@ -198,50 +197,3 @@ const DepositMoneyPage = ({ selectedAccountType }: { selectedAccountType: Accoun
 };
 
 export default DepositMoneyPage;
-
-
-/**
-                <FormContainer>
-                    <InputBox>
-                        <Box display="flex" gap={1}>
-                            <RoundedTextField
-                                variant="outlined"
-                                label="Enter Savings Duration"
-                                type="number"
-                                value={duration}
-                                onChange={(e) => setDuration(e.target.value)}
-                                fullWidth
-                            />
-                            <RoundedTextField
-                                select
-                                variant="outlined"
-                                value={durationUnit}
-                                onChange={(e) => setDurationUnit(e.target.value)}
-                                fullWidth
-                            >
-                                <MenuItem value="Days">Days</MenuItem>
-                                <MenuItem value="Months">Months</MenuItem>
-                                <MenuItem value="Years">Years</MenuItem>
-                            </RoundedTextField>
-                        </Box>
-                    </InputBox>
-                </FormContainer>
-                <FormContainer>
-                    <Typography variant="body2" fontWeight="bold" mt={2} mb={1} align="left">
-                        Saving Schedule
-                    </Typography>
-                    <ToggleButtonGroup
-                        value={schedule}
-                        exclusive
-                        onChange={(e, newSchedule) => setSchedule(newSchedule)}
-                        fullWidth
-                    >
-                        <ToggleButton value="Daily">Daily</ToggleButton>
-                        <ToggleButton value="Monthly">Monthly</ToggleButton>
-                        <ToggleButton value="Yearly">Yearly</ToggleButton>
-                    </ToggleButtonGroup>
-                </FormContainer>
-                <Typography variant="body2" color="textSecondary" mt={2}>
-                    Your wallet will be debited N57,142 daily for 14 days and you’ll be notified once you reach your savings target.
-                </Typography>
- */

@@ -1,12 +1,10 @@
-import { usePrivy } from '@privy-io/react-auth';
-import { useNavigate } from 'react-router-dom';
 import Container from '@mui/material/Container';
-import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
+import Box from '@mui/material/Box';
 import { styled } from '@mui/system';
 import { LinePlot } from '@mui/x-charts/LineChart';
 import { ResponsiveChartContainer } from '@mui/x-charts';
@@ -71,15 +69,6 @@ const data = [
 ];
 
 const HomePage = () => {
-  const { ready, authenticated } = usePrivy();
-  const navigate = useNavigate();
-
-  if (!ready) return <></>;
-
-  if (!authenticated) {
-    navigate('/', { replace: true });
-    return null;
-  }
 
   return (
     <Root>
