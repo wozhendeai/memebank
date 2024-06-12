@@ -1,0 +1,29 @@
+{
+  "name": "memebank-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/express": "^4.17.21",
+    "@types/express-session": "^1.18.0",
+    "@types/node": "^20.14.2",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "memorystore": "^1.6.7",
+    "siwe": "^2.3.2",
+    "typescript": "^5.4.5",
+    "viem": "^2.13.8"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17"
+  }
+}
