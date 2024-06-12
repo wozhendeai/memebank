@@ -165,7 +165,7 @@ const CreateAccountPage = () => {
                         </Title>
                     </Box>
                     <Box>
-                        <DepositMoneyPage />
+                        <DepositMoneyPage selectedAccountType={selectedAccount}/>
                     </Box>
                 </Content>
             </Root>
