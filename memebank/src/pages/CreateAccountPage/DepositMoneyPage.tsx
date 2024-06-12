@@ -1,7 +1,12 @@
-import { useState } from 'react';
-import { Container, Box, Typography, Paper, TextField, Button, InputAdornment, Modal } from '@mui/material';
+import { useEffect, useState } from 'react';
+import { Container, Box, Paper, TextField, Button, InputAdornment, Typography, Modal, CircularProgress } from '@mui/material';
 import { styled } from '@mui/system';
 import { SvgIconComponent } from '@mui/icons-material';
+import { useAccount, useWaitForTransactionReceipt } from 'wagmi';
+import { parseUnits } from 'viem';
+import { Link, useNavigate } from 'react-router-dom';
+import { erc20Abi } from 'viem';
+import { useWriteContracts } from 'wagmi/experimental'
 
 const Root = styled(Container)(({ theme }) => ({
     minHeight: '100vh',
@@ -87,35 +92,64 @@ interface AccountType {
 }
 
 const DepositMoneyPage = ({ selectedAccountType }: { selectedAccountType: AccountType }) => {
-
-    const [accountName, setAccountName] = useState('');
+    const [accountName, setAccountName] = useState('Default Name');
     const [amount, setAmount] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
+    const navigate = useNavigate();
+
+    const { address } = useAccount();
+    const { data, isPending, writeContracts } = useWriteContracts();
+    const hash = data as `0x${string}` | undefined;
+    const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
 
     const handleOpenModal = () => {
-        setAccountName(`Default Name`);
         setModalOpen(true);
     };
-    const handleCloseModal = () => setModalOpen(false);
+
+    const handleCloseModal = () => {
+        if (!isPending) {
+            setModalOpen(false);
+        }
+    };
 
     const handleCreateAccount = async () => {
-        // Initiate TX
-        // const wallet = wallets[0];
-        // const provider = await wallet.getEthereumProvider();
-        // console.log(wallet)
-        // const transactionRequest = {
-        //   to: '0xc8e5C4eeED08450FD5D5A2BC0450722d399A251C',
-        //   value: 100000, // Only necessary for payable methods
-        // };
-        // const transactionHash = await provider.request({
-        //   method: 'eth_sendTransaction',
-        //   params: [transactionRequest],
-        // });
-        // console.log(transactionHash)
+        if (!address) return;
 
-        // Finally, close modal
-        setModalOpen(false);
+        const amountToSend = parseUnits(amount, 6); // USDC has 6 decimal places
+
+        await writeContracts({
+            contracts: [
+                {
+                    abi: erc20Abi,
+                    address: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+                    functionName: 'approve',
+                    args: [
+                        "0x6BF9948F1af33DAB4176d4586FEC43a587241955",
+                        amountToSend,
+                    ],
+                },
+                {
+                    abi: erc20Abi,
+                    address: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+                    functionName: 'transferFrom',
+                    args: [
+                        address,
+                        "0x6BF9948F1af33DAB4176d4586FEC43a587241955",
+                        amountToSend,
+                    ],        
+                }
+            ]
+
+        })
+
+        // await sendTransaction(txData);
     };
+
+    useEffect(() => {
+        if (isConfirmed) {
+            navigate('/home');
+        }
+    }, [isConfirmed, navigate]);
 
     return (
         <Root>
@@ -132,6 +166,7 @@ const DepositMoneyPage = ({ selectedAccountType }: { selectedAccountType: Accoun
                         <RoundedTextField
                             fullWidth
                             required
+                            autoFocus
                             InputProps={{
                                 endAdornment: <InputAdornment position="end">USDC</InputAdornment>,
                             }}
@@ -144,7 +179,7 @@ const DepositMoneyPage = ({ selectedAccountType }: { selectedAccountType: Accoun
                     </InputBox>
                 </FormContainer>
                 <Typography variant="body2" color="textSecondary" mt={2}>
-                    A Coinbase account with the amount inputted is required to use this app.
+                    If you do not have enough USDC in your wallet, you can either transfer on-chain or pay with your Coinbase balance. <Link target="_blank" to='https://help.coinbase.com/en/wallet/getting-started/smart-wallet'>Learn more here</Link>
                 </Typography>
                 <ContinueButton fullWidth variant="contained" onClick={handleOpenModal}>
                     Continue
@@ -179,17 +214,22 @@ const DepositMoneyPage = ({ selectedAccountType }: { selectedAccountType: Accoun
                         variant="contained"
                         onClick={handleCreateAccount}
                         sx={{ marginBottom: 2, padding: 2, borderRadius: 2, backgroundColor: 'black', color: 'white' }}
+                        disabled={isPending}
                     >
-                        Create Account
+                        {isPending ? <CircularProgress size={24} color="inherit" /> : 'Create Account'}
                     </Button>
                     <Button
                         fullWidth
                         variant="outlined"
                         onClick={handleCloseModal}
                         sx={{ padding: 2, borderRadius: 2, color: 'black', borderColor: 'black' }}
+                        disabled={isPending}
                     >
                         Go Back
                     </Button>
+                    {hash && <Typography variant="body2" color="textSecondary">Transaction Hash: {hash}</Typography>}
+                    {isConfirming && <Typography variant="body2" color="textSecondary">Waiting for confirmation...</Typography>}
+                    {isConfirmed && <Typography variant="body2" color="textSecondary">Transaction confirmed.</Typography>}
                 </ModalContainer>
             </Modal>
         </Root>
