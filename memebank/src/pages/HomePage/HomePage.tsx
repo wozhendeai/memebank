@@ -10,6 +10,7 @@ import { LinePlot } from '@mui/x-charts/LineChart';
 import { ResponsiveChartContainer } from '@mui/x-charts';
 import TravelIcon from '@mui/icons-material/FlightTakeoff';
 import HomeNavbar from '../../components/HomeNavbar/HomeNavbar';
+import withAuthRedirect from '../../components/AuthRedirect/withAuthRedirect';
 
 const Root = styled(Container)(({ theme }) => ({
   minHeight: '100vh',
@@ -161,4 +162,6 @@ const HomePage = () => {
   );
 };
 
-export default HomePage;
+const AuthRedirectedHomePage = withAuthRedirect(HomePage);
+
+export default AuthRedirectedHomePage;

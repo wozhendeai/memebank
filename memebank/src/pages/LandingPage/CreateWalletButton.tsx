@@ -33,7 +33,7 @@ function CreateWalletButton() {
     return (
         <>
             <StyledButton variant="contained" color="primary" onClick={createWallet}>
-                {'Create Wallet'}
+                {'Sign In'}
             </StyledButton>
         </>
     );

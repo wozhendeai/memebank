@@ -2,6 +2,7 @@ import { Container, Typography, Grid } from '@mui/material';
 import Box from '@mui/material/Box';
 import { styled } from '@mui/system';
 import CreateWalletButton from './CreateWalletButton';
+import withAuthRedirect from '../../components/AuthRedirect/withAuthRedirect';
 
 const Root = styled(Container)(({ theme }) => ({
   height: '100vh',
@@ -43,4 +44,7 @@ const LandingPage = () => {
   );
 };
 
-export default LandingPage;
+// Required for fast refresh
+const AuthRedirectedLandingPage = withAuthRedirect(LandingPage);
+
+export default AuthRedirectedLandingPage;
