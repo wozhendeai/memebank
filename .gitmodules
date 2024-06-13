@@ -1,3 +1,15 @@
 [submodule "memebank-contracts/lib/forge-std"]
 	path = memebank-contracts/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "memebank-contracts/lib/openzeppelin-contracts"]
+	path = memebank-contracts/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "memebank-contracts/lib/synthetix-v3"]
+	path = memebank-contracts/lib/synthetix-v3
+	url = https://github.com/Synthetixio/synthetix-v3
+[submodule "memebank-contracts/lib/smart-margin-v3"]
+	path = memebank-contracts/lib/smart-margin-v3
+	url = https://github.com/Kwenta/smart-margin-v3
+[submodule "memebank-contracts/lib/synthetix"]
+	path = memebank-contracts/lib/synthetix
+	url = https://github.com/Synthetixio/synthetix.git
