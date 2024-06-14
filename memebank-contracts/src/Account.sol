@@ -99,8 +99,8 @@ contract Account is Ownable {
         uint256 acceptablePrice,
         bytes32 trackingCode,
         address referrer
-    ) external onlyOwner {
-        (IPerpsMarketProxy.Data memory retOrder, uint256 fees) = engine
+    ) external onlyOwner returns (IPerpsMarketProxy.Data memory retOrder, uint256 fees){
+        (retOrder, fees) = engine
             .commitOrder({
                 _perpsMarketId: perpsMarketId,
                 _accountId: accountId,
