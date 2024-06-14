@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.4;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -7,6 +7,7 @@ import {IPerpsMarketProxy} from "./external/IPerpsMarketProxy.sol";
 import {IEngine} from "./external/IEngine.sol";
 import {ISynthetixCore} from "./external/ISynthetixCore.sol";
 import {AccountFactory} from "./AccountFactory.sol";
+import "hardhat/console.sol";
 
 /// @title Account
 /// @notice Contract representing a user's trading account on Kwenta
@@ -51,6 +52,7 @@ contract Account is Ownable {
         IERC20 _usdc,
         AccountFactory _accountFactory
     ) Ownable(msg.sender) {
+        console.log("Account Constructor Started");
         perpsMarketProxy = _perpsMarketProxy;
         engine = _engine;
         sUSD = _sUSD;
@@ -59,6 +61,7 @@ contract Account is Ownable {
 
         // Create account in Kwenta and grant permissions
         accountId = perpsMarketProxy.createAccount();
+        console.log("Account created with ID");
         perpsMarketProxy.grantPermission({
             accountId: accountId,
             permission: "ADMIN",
@@ -66,21 +69,32 @@ contract Account is Ownable {
         });
 
         // Grant additional permissions to AccountFactory
-        // TODO: Only enable for
         perpsMarketProxy.grantPermission({
             accountId: accountId,
             permission: "ADMIN",
             user: address(accountFactory)
         });
+
+        // Approve the Engine to allow deposits
+        bool success = USDC.approve(address(engine), type(uint256).max);
+        require(success, "USDC approval failed");
+        // TODO: remove
+        console.log("Sucessfully approved:%s", success);
     }
 
     /// @notice Function to approve and deposit collateral
     /// @param amount The amount of collateral to deposit
-    function depositCollateral(int256 amount) external onlyOwner {
+    function depositCollateral(int256 amount) payable external onlyOwner {
         emit CollateralDeposited(address(USDC), amount);
-        
-        bool success = USDC.approve(address(engine), uint256(amount));
-        require(success, "USDC approval failed");
+        // maybe cuz were depositing in int256 from uint256?
+        // Transfer USDC tokens from the caller to the Account contract
+        bool success = USDC.transferFrom(
+            msg.sender,
+            address(this),
+            uint256(amount)
+        );
+        require(success, "USDC transfer failed");
+        console.log("We have %s", USDC.balanceOf(address(this)));
 
         engine.modifyCollateralZap({_accountId: accountId, _amount: amount});
     }
@@ -99,17 +113,20 @@ contract Account is Ownable {
         uint256 acceptablePrice,
         bytes32 trackingCode,
         address referrer
-    ) external onlyOwner returns (IPerpsMarketProxy.Data memory retOrder, uint256 fees){
-        (retOrder, fees) = engine
-            .commitOrder({
-                _perpsMarketId: perpsMarketId,
-                _accountId: accountId,
-                _sizeDelta: sizeDelta,
-                _settlementStrategyId: settlementStrategyId,
-                _acceptablePrice: acceptablePrice,
-                _trackingCode: trackingCode,
-                _referrer: referrer
-            });
+    )
+        external
+        onlyOwner
+        returns (IPerpsMarketProxy.Data memory retOrder, uint256 fees)
+    {
+        (retOrder, fees) = engine.commitOrder({
+            _perpsMarketId: perpsMarketId,
+            _accountId: accountId,
+            _sizeDelta: sizeDelta,
+            _settlementStrategyId: settlementStrategyId,
+            _acceptablePrice: acceptablePrice,
+            _trackingCode: trackingCode,
+            _referrer: referrer
+        });
         // @note Necessary to emit event after external call as we don't have fee/retOrder data
         //slither-disable-next-line low-level-calls
         emit OrderCommitted(
@@ -125,6 +142,7 @@ contract Account is Ownable {
         );
     }
 
+    // TODO: I don't think we even have to worry about this?
     /// @notice Updates the addresses of perpsMarketProxy, engine, sUSD, and USDC from the AccountFactory
     function updateAddresses() external onlyOwner {
         IPerpsMarketProxy newPerpsMarketProxy = accountFactory

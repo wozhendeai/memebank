@@ -1,2 +1,0 @@
-@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
-@synthetixio/core-modules/=lib/@synthetix-v3/utils/core-contracts/

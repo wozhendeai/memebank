@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.4;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IPerpsMarketProxy} from "./external/IPerpsMarketProxy.sol";
 import {IEngine} from "./external/IEngine.sol";
 import "./Account.sol";
+import "hardhat/console.sol";
 
 /// @title AccountFactory
 /// @notice Factory contract to create and manage accounts for Kwenta trading
@@ -48,8 +49,11 @@ contract AccountFactory is Ownable {
             _usdc: USDC,
             _accountFactory: AccountFactory(address(this))
         });
+        
         // Transfer ownership to the account creator
         newAccount.transferOwnership(msg.sender);
+        
+        emit AccountCreated(address(newAccount), msg.sender);
         return address(newAccount);
     }
 
