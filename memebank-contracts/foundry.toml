@@ -3,5 +3,6 @@ src = "src"
 out = "out"
 libs = ["lib"]
 auto_detect_solc = true
+rpc_endpoints = { base-sepolia = "https://base-sepolia.blockpi.network/v1/rpc/public" }
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
