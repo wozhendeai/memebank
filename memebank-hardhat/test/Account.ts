@@ -36,7 +36,7 @@ const PERPS_MARKET_PROXY_ADDRESS = "0xf53Ca60F031FAf0E347D44FbaA4870da68250c8d";
 const ENGINE_ADDRESS = "0xe5bB889B1f0B6B4B7384Bd19cbb37adBDDa941a6";
 const SUSD_ADDRESS = "0x8069c44244e72443722cfb22DcE5492cba239d39";
 const USDC_ADDRESS = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
-const USDC_WHALE = "0xFaEc9cDC3Ef75713b48f46057B98BA04885e3391";
+const USDC_WHALE = "0x3239a95a9262034ca28b9a03133775f716f119f8";
 const ACTOR_ADDRESS = "0xFd8d0A63F88C9B45E0790D101496c44FaDeDc899";
 const SIZE_DELTA = ethers.parseEther("0.01");
 const ACCEPTABLE_PRICE_LONG = ethers.MaxUint256;
@@ -67,10 +67,10 @@ async function deployContractsFixture() {
   const whaleSigner = await ethers.getSigner(USDC_WHALE);
 
   // Attach the whale signer to the USDC contract
-  const usdcWhale = USDC.connect(whaleSigner);
+  const usdcWhale = sUSD.connect(whaleSigner);
 
   // Ensure the whale has enough USDC to transfer
-  const amountToTransfer = ethers.parseUnits("10000000", 6); // 10 million USDC
+  const amountToTransfer = ethers.parseUnits("1000", 6); // 10 million USDC
   const transferTx = await usdcWhale.transfer(actor.address, amountToTransfer);
   await transferTx.wait();
   await stopImpersonatingAccount(USDC_WHALE);
@@ -106,7 +106,29 @@ describe("Account Tests", function () {
       .withArgs(anyValue, actor.address);
   });
 
-  it("should make user the owner of the new account", async function () {
+  it("should have granted kwentas engine admin permission", async function() {
+    const { accountFactory, actor, perpsMarketProxy } = await loadFixture(deployContractsFixture);
+    const createAccountTransaction = await accountFactory.connect(actor).createAccount();
+    const [newAccount, ] = await createNewAccountAndGetContract(createAccountTransaction);
+    const accountId = await newAccount.accountId();
+
+    // Fetch permissions from the perpsMarketProxy
+    const permissions = await perpsMarketProxy.getAccountPermissions(accountId);
+
+    // Get 'ADMIN' permission hash
+    const expectedPermissionHash = ethers.encodeBytes32String("ADMIN");
+
+    // Check if the permissions array contains the expected permission for the Kwenta engine
+    let hasPermission = permissions.some(perm => {
+      return perm.user.toLowerCase() === ENGINE_ADDRESS.toLowerCase() &&
+             perm.permissions.includes(expectedPermissionHash);
+    });
+    console.log(hasPermission)
+    // Assert that the necessary permission is present
+    expect(hasPermission, "Engine should have the required permissions for the account").to.be.true;
+  });
+
+  it("should make user the owner of the new account contract", async function () {
     const { accountFactory, actor } = await loadFixture(deployContractsFixture);
     const tx = await accountFactory.connect(actor).createAccount(); // Make sure to await the promise here
     const [newAccountContract,] = await createNewAccountAndGetContract(tx); // Correctly use await
@@ -116,23 +138,25 @@ describe("Account Tests", function () {
   });
 
   describe("Account Operation Tests", function () {
+    // TODO: Make a fixture to create accounts, or beforeEach
     it("should handle collateral deposits correctly", async function () {
-      const { accountFactory, USDC, actor } = await loadFixture(deployContractsFixture);
+      const { accountFactory, USDC, actor, sUSD} = await loadFixture(deployContractsFixture);
       const createAccountTransaction = await accountFactory.connect(actor).createAccount();
       const [newAccount, newAccountAddress] = await createNewAccountAndGetContract(createAccountTransaction); // Use await properly
 
       // Max approve `Account` contract for spending
-      const depositAmount = ethers.parseUnits("1000", 6);
-      await USDC.connect(actor).approve(newAccountAddress, ethers.MaxUint256);
+      const depositAmount = ethers.parseUnits("100", 18); // CHANGE DECIMALS
+      await sUSD.connect(actor).approve(newAccountAddress, ethers.MaxUint256);
+      await sUSD.connect(actor).approve(ENGINE_ADDRESS, ethers.MaxUint256);
 
       // Check allowance before deposit
-      const allowanceBefore = await USDC.allowance(actor.address, newAccountAddress);
+      const allowanceBefore = await sUSD.allowance(actor.address, newAccountAddress);
       expect(allowanceBefore).to.equal(ethers.MaxUint256);
 
       // Deposit
       await expect(newAccount.connect(actor).depositCollateral(depositAmount))
         .to.emit(newAccount, "CollateralDeposited")
-        .withArgs(USDC.address, depositAmount);
+        .withArgs(USDC_ADDRESS, depositAmount);
     });
 
     // it("should execute a trade and emit the OrderCommitted event", async function () {

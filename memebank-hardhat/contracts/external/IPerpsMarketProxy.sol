@@ -17,6 +17,11 @@ interface IPerpsMarketProxy {
         address user
     ) external;
 
+    function getAccountPermissions(uint128 accountId)
+        external
+        view
+        returns (IAccountModule.AccountPermissions[] memory accountPerms);
+
     /// @notice Returns the address that owns a given account, as recorded by the system.
     /// @param accountId The account id whose owner is being retrieved.
     /// @return owner The owner of the given account id.
@@ -131,4 +136,11 @@ interface IPerpsMarketProxy {
     function getMaxMarketSize(
         uint128 marketId
     ) external view returns (uint256 maxMarketSize);
+}
+
+interface IAccountModule {
+    struct AccountPermissions {
+        address user;
+        bytes32[] permissions;
+    }
 }

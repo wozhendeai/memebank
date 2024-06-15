@@ -52,16 +52,16 @@ contract Account is Ownable {
         IERC20 _usdc,
         AccountFactory _accountFactory
     ) Ownable(msg.sender) {
-        console.log("Account Constructor Started");
         perpsMarketProxy = _perpsMarketProxy;
         engine = _engine;
         sUSD = _sUSD;
         USDC = _usdc;
         accountFactory = _accountFactory;
 
-        // Create account in Kwenta and grant permissions
+        // Initiate a Synthetix v3 Account
         accountId = perpsMarketProxy.createAccount();
-        console.log("Account created with ID");
+
+        // Assign admin permission to Kwenta's Engine
         perpsMarketProxy.grantPermission({
             accountId: accountId,
             permission: "ADMIN",
@@ -75,28 +75,27 @@ contract Account is Ownable {
             user: address(accountFactory)
         });
 
-        // Approve the Engine to allow deposits
-        bool success = USDC.approve(address(engine), type(uint256).max);
-        require(success, "USDC approval failed");
-        // TODO: remove
-        console.log("Sucessfully approved:%s", success);
+        // Approve the Engine to manage collateral
+        require(sUSD.approve(address(engine), type(uint256).max), "sUSD approval failed");
     }
 
     /// @notice Function to approve and deposit collateral
     /// @param amount The amount of collateral to deposit
-    function depositCollateral(int256 amount) payable external onlyOwner {
-        emit CollateralDeposited(address(USDC), amount);
-        // maybe cuz were depositing in int256 from uint256?
+    function depositCollateral(uint256 amount) external payable onlyOwner {
+        emit CollateralDeposited(address(sUSD), int256(amount));
         // Transfer USDC tokens from the caller to the Account contract
-        bool success = USDC.transferFrom(
+        bool success = sUSD.transferFrom(
             msg.sender,
             address(this),
-            uint256(amount)
+            amount
         );
-        require(success, "USDC transfer failed");
-        console.log("We have %s", USDC.balanceOf(address(this)));
+        require(success, "sUSD transfer failed");
 
-        engine.modifyCollateralZap({_accountId: accountId, _amount: amount});
+        engine.modifyCollateral({
+            _accountId: accountId,
+            _amount: int256(amount),
+            _synthMarketId: 0
+        });
     }
 
     /// @notice Function to execute a trade on Kwenta
