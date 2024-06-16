@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "error": "npx @usecannon/cli decode synthetix-perps-market"
+    "error": "npx @usecannon/cli decode synthetix-perps-market",
+    "node": "npx hardhat node --fork https://api.developer.coinbase.com/rpc/v1/base/lzSHv83ZGfiUFE_YizE9vhXlAsViU7eE"
   },
   "author": "",
   "license": "ISC",

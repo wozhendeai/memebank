@@ -41,7 +41,6 @@ contract Account is Ownable {
         uint128 settlementStrategyId,
         uint256 acceptablePrice,
         bytes32 trackingCode,
-        address referrer,
         uint256 fees
     );
 
@@ -80,10 +79,15 @@ contract Account is Ownable {
             sUSD.approve(address(engine), type(uint256).max),
             "sUSD approval failed"
         );
+        require(
+            USDC.approve(address(engine), type(uint256).max),
+            "sUSD approval failed"
+        );
     }
 
     /// @notice Function to approve and deposit collateral
     /// @param amount The amount of collateral to deposit
+    // TODO: Should be named `modifyCollateral`
     function depositCollateral(uint256 amount) external payable onlyOwner {
         emit CollateralDeposited(address(sUSD), int256(amount));
 
@@ -95,7 +99,21 @@ contract Account is Ownable {
         engine.modifyCollateral({
             _accountId: accountId,
             _amount: int256(amount),
-            _synthMarketId: 0
+            _synthMarketId: 1
+        });
+    }
+
+    function modifyCollateralZap(uint256 amount) external payable onlyOwner {
+        emit CollateralDeposited(address(USDC), int256(amount));
+
+        // Transfer sUSD tokens from the caller to the Account contract
+        bool success = USDC.transferFrom(msg.sender, address(this), amount);
+        require(success, "USDC transfer failed");
+
+        // TODO: Maybe make synMarketId a param
+        engine.modifyCollateralZap({
+            _accountId: accountId,
+            _amount: int256(amount)
         });
     }
 
@@ -105,14 +123,12 @@ contract Account is Ownable {
     /// @param settlementStrategyId The ID of the settlement strategy
     /// @param acceptablePrice The acceptable price for the trade
     /// @param trackingCode The tracking code for the trade
-    /// @param referrer The address of the referrer
     function executeTrade(
         uint128 perpsMarketId,
         int128 sizeDelta,
         uint128 settlementStrategyId,
         uint256 acceptablePrice,
-        bytes32 trackingCode,
-        address referrer
+        bytes32 trackingCode
     )
         external
         onlyOwner
@@ -125,7 +141,7 @@ contract Account is Ownable {
             _settlementStrategyId: settlementStrategyId,
             _acceptablePrice: acceptablePrice,
             _trackingCode: trackingCode,
-            _referrer: referrer
+            _referrer: address(accountFactory)
         });
         // @note Necessary to emit event after external call as we don't have fee/retOrder data
         //slither-disable-next-line low-level-calls
@@ -137,7 +153,6 @@ contract Account is Ownable {
             settlementStrategyId,
             acceptablePrice,
             trackingCode,
-            referrer,
             fees
         );
     }

@@ -9,6 +9,8 @@ interface IPerpsMarketProxy {
                              ACCOUNT MODULE
     //////////////////////////////////////////////////////////////*/
 
+    function getAvailableMargin(uint128 accountId) external view returns (int256 availableMargin);
+
     function createAccount() external returns (uint128 accountId);
 
     function grantPermission(
