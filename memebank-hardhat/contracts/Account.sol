@@ -24,14 +24,6 @@ contract Account is Ownable {
     /// @notice Emitted when collateral is deposited
     event CollateralDeposited(address indexed token, int256 amount);
 
-    /// @notice Emitted when contract addresses are updated
-    event AddressesUpdated(
-        IPerpsMarketProxy perpsMarketProxy,
-        IEngine engine,
-        IERC20 sUSD,
-        IERC20 USDC
-    );
-
     /// @notice Emitted when an order is committed
     event OrderCommitted(
         IPerpsMarketProxy.Data retOrder,
@@ -87,8 +79,9 @@ contract Account is Ownable {
 
     /// @notice Function to approve and deposit collateral
     /// @param amount The amount of collateral to deposit
-    // TODO: Should be named `modifyCollateral`
-    function depositCollateral(uint256 amount) external payable onlyOwner {
+    // One issue is only 'sUSD' and 'USDC' is deposit-able because of the approvals
+    // We can add an approve function or leave it - these are probably enough
+    function modifyCollateral(uint256 amount, uint128 synthMarketId) external payable onlyOwner {
         emit CollateralDeposited(address(sUSD), int256(amount));
 
         // Transfer sUSD tokens from the caller to the Account contract
@@ -99,7 +92,7 @@ contract Account is Ownable {
         engine.modifyCollateral({
             _accountId: accountId,
             _amount: int256(amount),
-            _synthMarketId: 1
+            _synthMarketId: synthMarketId
         });
     }
 
@@ -157,20 +150,4 @@ contract Account is Ownable {
         );
     }
 
-    // TODO: I don't think we even have to worry about this?
-    /// @notice Updates the addresses of perpsMarketProxy, engine, sUSD, and USDC from the AccountFactory
-    function updateAddresses() external onlyOwner {
-        IPerpsMarketProxy newPerpsMarketProxy = accountFactory
-            .perpsMarketProxy();
-        IEngine newEngine = accountFactory.engine();
-        IERC20 newSUSD = accountFactory.sUSD();
-        IERC20 newUSDC = accountFactory.USDC();
-
-        perpsMarketProxy = newPerpsMarketProxy;
-        engine = newEngine;
-        sUSD = newSUSD;
-        USDC = newUSDC;
-
-        emit AddressesUpdated(perpsMarketProxy, engine, sUSD, USDC);
-    }
 }
