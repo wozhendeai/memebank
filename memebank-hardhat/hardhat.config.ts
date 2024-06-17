@@ -8,7 +8,7 @@ import { load } from 'ts-dotenv';
 import "hardhat-gas-reporter"
 
 const env = load({
-    PRIVATE_KEY: String,
+  PRIVATE_KEY: String,
 });
 
 const config: HardhatUserConfig = {
@@ -25,16 +25,24 @@ const config: HardhatUserConfig = {
   },
   networks: {
     sepolia: {
-      url: "https://api.developer.coinbase.com/rpc/v1/base-sepolia/lzSHv83ZGfiUFE_YizE9vhXlAsViU7eE",
-      accounts: [env.PRIVATE_KEY as string],
       forking: {
         url: "https://api.developer.coinbase.com/rpc/v1/base-sepolia/lzSHv83ZGfiUFE_YizE9vhXlAsViU7eE",
-      }
+      },
+      url: "https://api.developer.coinbase.com/rpc/v1/base-sepolia/lzSHv83ZGfiUFE_YizE9vhXlAsViU7eE",
+      accounts: [env.PRIVATE_KEY as string]
+    },
+    base: {
+      forking: {
+        url: "https://api.developer.coinbase.com/rpc/v1/base/lzSHv83ZGfiUFE_YizE9vhXlAsViU7eE",
+      },
+      url: "https://api.developer.coinbase.com/rpc/v1/base/lzSHv83ZGfiUFE_YizE9vhXlAsViU7eE",
+      accounts: [env.PRIVATE_KEY as string]
     }
   },
   gasReporter: {
     L2: "base",
-    gasPrice: 1
+    gasPrice: 1,
+    enabled: false
   }
 };
 

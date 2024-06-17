@@ -87,8 +87,7 @@ contract Account is Ownable {
         // Transfer sUSD tokens from the caller to the Account contract
         bool success = sUSD.transferFrom(msg.sender, address(this), amount);
         require(success, "sUSD transfer failed");
-
-        // TODO: Maybe make synMarketId a param
+        
         engine.modifyCollateral({
             _accountId: accountId,
             _amount: int256(amount),
