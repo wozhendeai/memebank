@@ -6,6 +6,7 @@ const {
   stopImpersonatingAccount,
   setBalance
 } = require("@nomicfoundation/hardhat-toolbox/network-helpers");
+const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 import { ENGINE_ADDRESS, COLLATERAL_ADDRESS, COLLATERAL_DECIMALS, SUSD_ADDRESS, USDC_ADDRESS } from "./utils/Constants";
 import { DeployAccountFactoryFixtureReturnType, deployAccountFactoryFixture } from "./utils/deployAccountFactoryFixture";
 import { createNewAccountAndGetContract } from "./utils/createNewAccountAndGetContract";
@@ -105,6 +106,26 @@ describe("Account Tests", function () {
 
     await expect(newAccount.connect(actor).executeTrade(perpsMarketId, sizeDelta, settlementStrategyId, acceptablePrice, trackingCode))
       .to.emit(newAccount, "OrderCommitted")
-      .withArgs(ethers.ZeroAddress, perpsMarketId, accountId, sizeDelta, settlementStrategyId, acceptablePrice, trackingCode, 0);
+      .withArgs(
+        [
+          anyValue, // settlementTime
+          [
+            perpsMarketId,
+            accountId,
+            sizeDelta,
+            settlementStrategyId,
+            acceptablePrice,
+            trackingCode,
+            anyValue, // referrer TODO: owner of factory contract
+          ],
+        ],
+        perpsMarketId,
+        accountId,
+        sizeDelta,
+        settlementStrategyId,
+        acceptablePrice,
+        trackingCode,
+        anyValue // fees
+      );
   });
 });

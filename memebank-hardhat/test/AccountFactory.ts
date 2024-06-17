@@ -16,7 +16,7 @@ describe("AccountFactory Tests", function () {
         const storedEngineAddress = await accountFactory.engine();
         const storedSUSDAddress = await accountFactory.sUSD();
         const storedUSDCAddress = await accountFactory.USDC();
-        console.log(storedEngineAddress)
+
         expect(storedPerpsMarketProxyAddress).to.equal(PERPS_MARKET_PROXY_ADDRESS);
         expect(storedEngineAddress).to.equal(ENGINE_ADDRESS);
         expect(storedSUSDAddress).to.equal(SUSD_ADDRESS);
@@ -43,4 +43,25 @@ describe("AccountFactory Tests", function () {
     });
 
     // TODO: test getAccounts
+    it("should return the correct list of accounts for a user", async function () {
+        const { accountFactory, actor, actorAddress } = await loadFixture(deployAccountFactoryFixture) as DeployAccountFactoryFixtureReturnType;
+
+        // Create multiple accounts for the user
+        const tx1 = await accountFactory.connect(actor).createAccount();
+        const [,account1Address] = await createNewAccountAndGetContract(tx1);
+
+        const tx2 = await accountFactory.connect(actor).createAccount();
+        const [,account2Address] = await createNewAccountAndGetContract(tx2);
+
+        const tx3 = await accountFactory.connect(actor).createAccount();
+        const [,account3Address] = await createNewAccountAndGetContract(tx3);
+
+        // Call getAccountsByUser and check the returned list of accounts
+        const userAccounts = await accountFactory.getAccountsByUser(actorAddress);
+
+        expect(userAccounts).to.have.lengthOf(3);
+        expect(userAccounts).to.include(account1Address);
+        expect(userAccounts).to.include(account2Address);
+        expect(userAccounts).to.include(account3Address);
+    });
 });
