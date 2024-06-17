@@ -5,6 +5,7 @@ import '@typechain/hardhat'
 import '@nomicfoundation/hardhat-ethers'
 import '@nomicfoundation/hardhat-chai-matchers'
 import { load } from 'ts-dotenv';
+import "hardhat-gas-reporter"
 
 const env = load({
     PRIVATE_KEY: String,
@@ -30,7 +31,11 @@ const config: HardhatUserConfig = {
         url: "https://api.developer.coinbase.com/rpc/v1/base-sepolia/lzSHv83ZGfiUFE_YizE9vhXlAsViU7eE",
       }
     }
-  }  
+  },
+  gasReporter: {
+    L2: "base",
+    gasPrice: 1
+  }
 };
 
 export default config;

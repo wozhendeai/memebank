@@ -10,7 +10,7 @@ const {
 // TODO: AccountFactory tests
 describe("AccountFactory Tests", function () {
     it("should have the correct params", async function () {
-        const { accountFactory } = await loadFixture(deployAccountFactoryFixture);
+        const { accountFactory, engine } = await loadFixture(deployAccountFactoryFixture);
 
         // Retrieve addresses from the contract
         const storedPerpsMarketProxyAddress = await accountFactory.perpsMarketProxy();
@@ -26,7 +26,7 @@ describe("AccountFactory Tests", function () {
     });
 
     it("should emit an AccountCreated event with the new account address and creator address", async function () {
-        const { accountFactory, actor } = await loadFixture(deployAccountFactoryFixture);;
+        const { accountFactory, actor } = await loadFixture(deployAccountFactoryFixture);
         const tx = accountFactory.connect(actor).createAccount();
 
         await expect(tx)
