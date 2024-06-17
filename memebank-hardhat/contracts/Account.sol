@@ -81,13 +81,16 @@ contract Account is Ownable {
     /// @param amount The amount of collateral to deposit
     // One issue is only 'sUSD' and 'USDC' is deposit-able because of the approvals
     // We can add an approve function or leave it - these are probably enough
-    function modifyCollateral(uint256 amount, uint128 synthMarketId) external payable onlyOwner {
+    function modifyCollateral(
+        uint256 amount,
+        uint128 synthMarketId
+    ) external payable onlyOwner {
         emit CollateralDeposited(address(sUSD), int256(amount));
 
         // Transfer sUSD tokens from the caller to the Account contract
         bool success = sUSD.transferFrom(msg.sender, address(this), amount);
         require(success, "sUSD transfer failed");
-        
+
         engine.modifyCollateral({
             _accountId: accountId,
             _amount: int256(amount),
@@ -149,4 +152,35 @@ contract Account is Ownable {
         );
     }
 
+    // Fetches value of an account
+    function getTotalAccountBalance() external view returns (int256) {
+        int256 totalAccountBalance = 0;
+
+        // Get the account's available margin
+        int256 availableMargin = perpsMarketProxy.getAvailableMargin(accountId);
+        totalAccountBalance += availableMargin;
+
+        // Get the list of market IDs the account has open positions in
+        uint256[] memory openPositionMarketIds = perpsMarketProxy
+            .getAccountOpenPositions(accountId);
+
+        // Iterate through the open positions and add the remaining margin to the total balance
+        for (uint256 i = 0; i < openPositionMarketIds.length; i++) {
+            uint128 marketId = uint128(openPositionMarketIds[i]);
+
+            (
+                int256 totalPnl,
+                int256 accruedFunding,
+                int128 positionSize,
+                uint256 owedInterest
+            ) = perpsMarketProxy.getOpenPosition(accountId, marketId);
+
+            int256 remainingMargin = totalPnl +
+                accruedFunding -
+                int256(owedInterest);
+            totalAccountBalance += remainingMargin;
+        }
+
+        return totalAccountBalance;
+    }
 }
