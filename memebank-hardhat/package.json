@@ -6,12 +6,14 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "error": "npx @usecannon/cli decode synthetix-perps-market",
-    "node": "npx hardhat node --fork https://api.developer.coinbase.com/rpc/v1/base/lzSHv83ZGfiUFE_YizE9vhXlAsViU7eE"
+    "node": "npx hardhat node --fork https://api.developer.coinbase.com/rpc/v1/base/lzSHv83ZGfiUFE_YizE9vhXlAsViU7eE",
+    "deploy:testnet": "npx hardhat ignition deploy ./ignition/modules/AccountFactory.t.ts --network sepolia"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.7",
+    "@nomicfoundation/hardhat-ignition-ethers": "^0.15.4",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@types/chai": "^4.3.16",
     "@types/mocha": "^10.0.6",
@@ -20,6 +22,7 @@
     "hardhat": "^2.22.5"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^5.0.2"
+    "@openzeppelin/contracts": "^5.0.2",
+    "ts-dotenv": "^0.9.1"
   }
 }
