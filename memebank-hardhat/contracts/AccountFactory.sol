@@ -37,22 +37,74 @@ contract AccountFactory is Ownable {
     /// @notice Function to create a new account
     /// @return address The address of the newly created account
     function createAccount() external returns (address) {
-        Account newAccount = new Account({
-            _perpsMarketProxy: perpsMarketProxy,
-            _engine: engine,
-            _sUSD: sUSD,
-            _usdc: USDC,
-            _accountFactory: AccountFactory(address(this))
-        });
+        bytes memory bytecode = type(Account).creationCode;
+        bytecode = abi.encodePacked(
+            bytecode,
+            abi.encode(
+                perpsMarketProxy,
+                engine,
+                sUSD,
+                USDC,
+                AccountFactory(address(this))
+            )
+        );
 
-        // Transfer ownership to the account creator
+        // Generate a salt based on the sender and perhaps other factors
+        bytes32 salt = keccak256(
+            abi.encodePacked(msg.sender, userAccounts[msg.sender].length)
+        );
+
+        address newAccountAddress;
+
+        // Deploy the contract using CREATE2
+        assembly {
+            newAccountAddress := create2(
+                0,
+                add(bytecode, 32),
+                mload(bytecode),
+                salt
+            )
+        }
+
+        // Transfer ownership of SC to user
+        Account newAccount = Account(newAccountAddress);
         newAccount.transferOwnership(msg.sender);
+        // Add to list of new accounts
+        userAccounts[msg.sender].push(newAccountAddress);
 
-        // Track the creation of the new account for the user
-        userAccounts[msg.sender].push(address(newAccount));
+        emit AccountCreated(newAccountAddress, msg.sender);
+        return newAccountAddress;
+    }
 
-        emit AccountCreated(address(newAccount), msg.sender);
-        return address(newAccount);
+    // Determines what the next address of account user creates will be
+    function determineNewAccountAddress(
+        address sender
+    ) public view returns (address) {
+        bytes memory bytecode = type(Account).creationCode;
+        bytecode = abi.encodePacked(
+            bytecode,
+            abi.encode(
+                perpsMarketProxy,
+                engine,
+                sUSD,
+                USDC,
+                AccountFactory(address(this))
+            )
+        );
+        bytes32 salt = keccak256(
+            abi.encodePacked(sender, userAccounts[sender].length)
+        );
+
+        bytes32 hash = keccak256(
+            abi.encodePacked(
+                bytes1(0xff),
+                address(this),
+                salt,
+                keccak256(bytecode)
+            )
+        );
+
+        return address(uint160(uint256(hash)));
     }
 
     /// @notice Retrieve all accounts associated with a user address.

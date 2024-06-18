@@ -171,7 +171,7 @@ contract Account is Ownable {
             (
                 int256 totalPnl,
                 int256 accruedFunding,
-                int128 positionSize,
+                ,
                 uint256 owedInterest
             ) = perpsMarketProxy.getOpenPosition(accountId, marketId);
 

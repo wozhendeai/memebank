@@ -1,6 +1,6 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
-// Mainnet addresses
+// Mainnet addresses TODO: import from mainnet?
 export const PERPS_MARKET_PROXY_ADDRESS = "0x0A2AF931eFFd34b81ebcc57E3d3c9B1E1dE1C9Ce";
 export const ENGINE_ADDRESS = "0xe331a7eeC851Ba702aA8BF43070a178451d6D28E";
 export const SUSD_ADDRESS = "0xC74eA762cF06c9151cE074E6a569a5945b6302E7";

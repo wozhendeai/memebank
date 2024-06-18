@@ -9,7 +9,9 @@ interface IPerpsMarketProxy {
                              ACCOUNT MODULE
     //////////////////////////////////////////////////////////////*/
 
-    function getAvailableMargin(uint128 accountId) external view returns (int256 availableMargin);
+    function getAvailableMargin(
+        uint128 accountId
+    ) external view returns (int256 availableMargin);
 
     function createAccount() external returns (uint128 accountId);
 
@@ -19,10 +21,37 @@ interface IPerpsMarketProxy {
         address user
     ) external;
 
-    function getAccountPermissions(uint128 accountId)
+    function getAccountPermissions(
+        uint128 accountId
+    )
         external
         view
         returns (IAccountModule.AccountPermissions[] memory accountPerms);
+
+    /**
+     * @notice Gets all markets that a given account id has a position in
+     * @param accountId Id of the account.
+     */
+    function getAccountOpenPositions(
+        uint128 accountId
+    ) external view returns (uint256[] memory);
+
+    /**
+     * @notice Gets the details of an open position.
+     * @param accountId Id of the account.
+     * @param marketId Id of the position market.
+     * @return totalPnl pnl of the entire position including funding.
+     * @return accruedFunding accrued funding of the position.
+     * @return positionSize size of the position.
+     * @return owedInterest interest owed due to open position.
+     */
+    function getOpenPosition(
+        uint128 accountId,
+        uint128 marketId
+    )
+        external
+        view
+        returns (int256 totalPnl, int256 accruedFunding, int128 positionSize, uint256 owedInterest);
 
     /// @notice Returns the address that owns a given account, as recorded by the system.
     /// @param accountId The account id whose owner is being retrieved.
@@ -113,20 +142,6 @@ interface IPerpsMarketProxy {
         uint128 synthMarketId,
         int256 amountDelta
     ) external;
-
-    /// @notice Gets the details of an open position.
-    /// @param accountId Id of the account.
-    /// @param marketId Id of the position market.
-    /// @return totalPnl pnl of the entire position including funding.
-    /// @return accruedFunding accrued funding of the position.
-    /// @return positionSize size of the position.
-    function getOpenPosition(
-        uint128 accountId,
-        uint128 marketId
-    )
-        external
-        view
-        returns (int256 totalPnl, int256 accruedFunding, int128 positionSize);
 
     /*//////////////////////////////////////////////////////////////
                           PERPS MARKET MODULE

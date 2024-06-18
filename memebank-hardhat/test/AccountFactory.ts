@@ -35,10 +35,9 @@ describe("AccountFactory Tests", function () {
 
     it("should make user the owner of the new account contract", async function () {
         const { accountFactory, actor, actorAddress } = await loadFixture(deployAccountFactoryFixture) as DeployAccountFactoryFixtureReturnType;
-        const tx = await accountFactory.connect(actor).createAccount(); // Make sure to await the promise here
-        const [newAccountContract,] = await createNewAccountAndGetContract(tx); // Correctly use await
+        const tx = await accountFactory.connect(actor).createAccount();
+        const [newAccountContract,] = await createNewAccountAndGetContract(tx);
 
-        // Assuming there's a way to retrieve the owner from the Account contract
         expect(await newAccountContract.owner()).to.equal(actorAddress);
     });
 
@@ -64,4 +63,18 @@ describe("AccountFactory Tests", function () {
         expect(userAccounts).to.include(account2Address);
         expect(userAccounts).to.include(account3Address);
     });
+
+    it("should correctly predict the new account address", async function () {
+        const { accountFactory, actor, actorAddress } = await loadFixture(deployAccountFactoryFixture) as DeployAccountFactoryFixtureReturnType;
+
+        // Predict the new account address
+        const predictedAddress = await accountFactory.determineNewAccountAddress(actorAddress);
+        // Create the new account
+        const tx = await accountFactory.connect(actor).createAccount();
+        const [newAccountContract, newAccountAddress] = await createNewAccountAndGetContract(tx);
+    
+        // Check if the predicted address matches the actual new account address
+        expect(predictedAddress).to.equal(newAccountAddress);
+    });
+    
 });
