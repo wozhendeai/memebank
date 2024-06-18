@@ -2,11 +2,14 @@ import { useEffect, useState } from 'react';
 import { Container, Box, Paper, TextField, Button, InputAdornment, Typography, Modal, CircularProgress } from '@mui/material';
 import { styled } from '@mui/system';
 import { SvgIconComponent } from '@mui/icons-material';
-import { useAccount, useWaitForTransactionReceipt } from 'wagmi';
-import { parseUnits } from 'viem';
-import { Link, useNavigate } from 'react-router-dom';
-import { erc20Abi } from 'viem';
-import { useWriteContracts } from 'wagmi/experimental'
+import { useAccount, useSwitchChain, } from 'wagmi';
+// import { erc20Abi, parseUnits } from 'viem';
+import { Link, } from 'react-router-dom';
+import { useCallsStatus, useWriteContracts } from 'wagmi/experimental'
+import { base } from 'viem/chains';
+import { contracts } from '../../contracts/contracts';
+import { erc20Abi, parseUnits } from 'viem';
+import { useNewAccountAddress } from '../../hooks/useNewAccountAddress';
 
 const Root = styled(Container)(({ theme }) => ({
     minHeight: '100vh',
@@ -95,61 +98,79 @@ const DepositMoneyPage = ({ selectedAccountType }: { selectedAccountType: Accoun
     const [accountName, setAccountName] = useState('Default Name');
     const [amount, setAmount] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
-    const navigate = useNavigate();
+    const { switchChainAsync } = useSwitchChain()
 
-    const { address } = useAccount();
-    const { data, isPending, writeContracts } = useWriteContracts();
-    const hash = data as `0x${string}` | undefined;
-    const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
+    const { address, chainId } = useAccount();
+    const { isSuccess: isConfirmed, isPending: writeContractIsPending, writeContracts, data: id, error } = useWriteContracts();
+    const { newAccountAddress, loading: newAccountAddressLoading, error: newAccountAddressError } = useNewAccountAddress();
 
+    const { data: callsStatus } = useCallsStatus({
+        id: id as string,
+        query: {
+            enabled: !!id,
+            // Poll every second until the calls are confirmed
+            refetchInterval: (data) =>
+                data.state.data?.status === "CONFIRMED" ? false : 1000,
+        },
+    });
+
+    const isLoading = newAccountAddressLoading || writeContractIsPending || (!!callsStatus ?? callsStatus?.status == 'PENDING');
+    console.log(`found addr: ` + newAccountAddress, `is loading: ` + isLoading)
     const handleOpenModal = () => {
         setModalOpen(true);
     };
 
     const handleCloseModal = () => {
-        if (!isPending) {
+        if (!isLoading) {
             setModalOpen(false);
         }
     };
 
     const handleCreateAccount = async () => {
         if (!address) return;
+        if (chainId !== base.id) {
+            await switchChainAsync({ chainId: base.id });
+        }
 
         const amountToSend = parseUnits(amount, 6); // USDC has 6 decimal places
 
-        await writeContracts({
-            contracts: [
-                {
-                    abi: erc20Abi,
-                    address: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
-                    functionName: 'approve',
-                    args: [
-                        "0x6BF9948F1af33DAB4176d4586FEC43a587241955",
-                        amountToSend,
-                    ],
-                },
-                {
-                    abi: erc20Abi,
-                    address: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
-                    functionName: 'transferFrom',
-                    args: [
-                        address,
-                        "0x6BF9948F1af33DAB4176d4586FEC43a587241955",
-                        amountToSend,
-                    ],        
-                }
-            ]
+        // const transactions = ;
 
-        })
+        // if (newAccountAddress) {
+        //     transactions.push();
+        // }
 
-        // await sendTransaction(txData);
+        // Trigger the transactions
+        console.error(error)
+        if (newAccountAddress)
+            writeContracts({
+                contracts: [
+                    {
+                        address: contracts.AccountFactory.address,
+                        abi: contracts.AccountFactory.abi,
+                        functionName: "createAccount"
+                    },
+                    {
+                        address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // USDC contract address
+                        abi: erc20Abi,
+                        functionName: "approve",
+                        args: [newAccountAddress, amountToSend],
+                    },
+                    {
+                        address: newAccountAddress,
+                        abi: contracts.Account.abi,
+                        functionName: "modifyCollateralZap",
+                        args: [amountToSend],
+                    }   
+                ]
+            });
+
     };
 
     useEffect(() => {
-        if (isConfirmed) {
-            navigate('/home');
-        }
-    }, [isConfirmed, navigate]);
+        console.log(`newAccountAddressError: ` + newAccountAddressError)
+        console.log(`write error: ` + error)
+    }, [error]);
 
     return (
         <Root>
@@ -214,21 +235,21 @@ const DepositMoneyPage = ({ selectedAccountType }: { selectedAccountType: Accoun
                         variant="contained"
                         onClick={handleCreateAccount}
                         sx={{ marginBottom: 2, padding: 2, borderRadius: 2, backgroundColor: 'black', color: 'white' }}
-                        disabled={isPending}
+                        disabled={isLoading}
                     >
-                        {isPending ? <CircularProgress size={24} color="inherit" /> : 'Create Account'}
+                        {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Create Account'}
                     </Button>
+                    {callsStatus && <div> Status: {callsStatus.status}</div>}
                     <Button
                         fullWidth
                         variant="outlined"
                         onClick={handleCloseModal}
                         sx={{ padding: 2, borderRadius: 2, color: 'black', borderColor: 'black' }}
-                        disabled={isPending}
+                        disabled={isLoading}
                     >
                         Go Back
                     </Button>
-                    {hash && <Typography variant="body2" color="textSecondary">Transaction Hash: {hash}</Typography>}
-                    {isConfirming && <Typography variant="body2" color="textSecondary">Waiting for confirmation...</Typography>}
+                    {isLoading && <Typography variant="body2" color="textSecondary">Waiting for confirmation...</Typography>}
                     {isConfirmed && <Typography variant="body2" color="textSecondary">Transaction confirmed.</Typography>}
                 </ModalContainer>
             </Modal>

@@ -10,7 +10,9 @@ import { LinePlot } from '@mui/x-charts/LineChart';
 import { ResponsiveChartContainer } from '@mui/x-charts';
 import TravelIcon from '@mui/icons-material/FlightTakeoff';
 import HomeNavbar from '../../components/HomeNavbar/HomeNavbar';
+import Skeleton from '@mui/material/Skeleton';
 import withAuthRedirect from '../../components/AuthRedirect/withAuthRedirect';
+import useAccountData from '../../hooks/useAccountData'; // Import your custom hook
 
 const Root = styled(Container)(({ theme }) => ({
   minHeight: '100vh',
@@ -43,7 +45,7 @@ const GraphContainer = styled(Paper)(({ theme }) => ({
   overflow: 'hidden',
 }));
 
-const GoalCard = styled(Paper)(({ theme }) => ({
+const AccountCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
   margin: theme.spacing(1),
   textAlign: 'left',
@@ -70,6 +72,8 @@ const data = [
 ];
 
 const HomePage = () => {
+  const { accounts, isLoading, } = useAccountData();
+  console.log(accounts)
 
   return (
     <Root>
@@ -146,14 +150,32 @@ const HomePage = () => {
         </Box>
         {/* Accounts Cards */}
         <Grid container spacing={1} style={{ margin: 0, width: '100%' }}>
-          <Grid item xs={12} sm={6}>
-            <GoalCard>
-              <TravelIcon style={{ fontSize: 40 }} />
-              <Typography variant="h6">Travelling</Typography>
-              <Typography variant="h5">$2,398</Typography>
-              <Typography variant="body2" color="textSecondary">+ $223 this month</Typography>
-            </GoalCard>
-          </Grid>
+          {isLoading ? (
+            // Display 4 skeleton placeholders when data is loading
+            Array.from(new Array(4)).map((_, index) => (
+              <Grid item xs={12} sm={6} key={index}>
+                <AccountCard>
+                  <Skeleton variant="circular" width={40} height={40} />
+                  <Skeleton variant="text" height={24} width="80%" />
+                  <Skeleton variant="text" height={30} width="60%" />
+                  <Skeleton variant="text" height={18} width="40%" />
+                </AccountCard>
+              </Grid>
+            ))
+          ) : (
+            accounts.map(account => (
+              <Grid item xs={12} sm={6} key={account.address}>
+                <AccountCard>
+                  <TravelIcon style={{ fontSize: 40 }} />
+                  <Typography variant="h6">Account</Typography>
+                  <Typography variant="h5">${account.value.toString()}</Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Some more details here
+                  </Typography>
+                </AccountCard>
+              </Grid>
+            ))
+          )}
         </Grid>
       </Content>
 
