@@ -3,7 +3,7 @@ import { Container, Box, Paper, TextField, Button, InputAdornment, Typography, M
 import { styled } from '@mui/system';
 import { useAccount, useSwitchChain, } from 'wagmi';
 // import { erc20Abi, parseUnits } from 'viem';
-import { Link, } from 'react-router-dom';
+import { Link, useNavigate, } from 'react-router-dom';
 import { useCallsStatus, useWriteContracts } from 'wagmi/experimental'
 import { base } from 'viem/chains';
 import { contracts } from '../../contracts/contracts';
@@ -89,15 +89,17 @@ const ModalContainer = styled(Box)`
 `;
 
 const DepositMoneyPage = ({ selectedAccountType }: { selectedAccountType: ComponentAccountType }) => {
+    const navigate = useNavigate();
     const { address, chainId } = useAccount();
     const { switchChainAsync } = useSwitchChain()
-    const { data: writeContractData, writeContracts, isSuccess: isConfirmed, isPending: writeContractIsPending, error: writeContractError } = useWriteContracts();
-    const { newAccountAddress, loading: newAccountAddressLoading, error: newAccountAddressError } = useNewAccountAddress(selectedAccountType);
+    const { data: writeContractData, writeContractsAsync, isPending: writeContractIsPending, isSuccess } = useWriteContracts();
+    const { newAccountAddress, loading: newAccountAddressLoading } = useNewAccountAddress(selectedAccountType);
 
     const [accountName, setAccountName] = useState('Default Name');
     const [amount, setAmount] = useState('');
     const [amountError, setAmountError] = useState(false);
-    const [modalOpen, setModalOpen] = useState(false);
+    const [reviewModalOpen, setReviewModalOpen] = useState(false);
+    const [confirmedModalOpen, setConfirmedModalOpen] = useState(false);
 
     const { data: callsStatus } = useCallsStatus({
         id: writeContractData as string,
@@ -110,24 +112,29 @@ const DepositMoneyPage = ({ selectedAccountType }: { selectedAccountType: Compon
     });
 
     const isLoading = newAccountAddressLoading || writeContractIsPending || (callsStatus?.status === 'PENDING');
-    const isError = writeContractError || newAccountAddressError;
-    isError ?? console.log(writeContractError, newAccountAddressError);
-    
+    // const isError = writeContractError || newAccountAddressError;
+
     const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         setAmount(value);
         setAmountError(Number(value) <= 0);
     };
 
-    const handleOpenModal = () => {
-        setModalOpen(true);
+    const handleOpenReviewModal = () => {
+        setReviewModalOpen(true);
     };
 
-    const handleCloseModal = () => {
+    const handleCloseReviewModal = () => {
         if (!isLoading) {
-            setModalOpen(false);
+            setReviewModalOpen(false);
         }
     };
+
+
+    const handleCloseConfirmedModal = () => {
+        setConfirmedModalOpen(false);
+        navigate('/home', { replace: true });
+    }
 
     const handleCreateAccount = async () => {
         if (!address) return;
@@ -140,7 +147,7 @@ const DepositMoneyPage = ({ selectedAccountType }: { selectedAccountType: Compon
         // Trigger the transactions
         // TODO: Check 
         if (newAccountAddress)
-            writeContracts({
+            await writeContractsAsync({
                 contracts: [
                     {
                         address: contracts.AccountFactory.address,
@@ -162,6 +169,10 @@ const DepositMoneyPage = ({ selectedAccountType }: { selectedAccountType: Compon
                     }
                 ]
             });
+        if (isSuccess) {
+            console.log('Setting open!')
+            setConfirmedModalOpen(true);
+        }
     };
 
     // TODO: Redirect to homescreen
@@ -203,11 +214,12 @@ const DepositMoneyPage = ({ selectedAccountType }: { selectedAccountType: Compon
                 <Typography variant="body2" color="textSecondary" mt={2}>
                     If you do not have enough USDC in your wallet, you can either transfer on-chain or pay with your Coinbase balance. <Link target="_blank" to='https://help.coinbase.com/en/wallet/getting-started/smart-wallet'>Learn more here</Link>
                 </Typography>
-                <ContinueButton fullWidth variant="contained" onClick={handleOpenModal}>
+                <ContinueButton fullWidth variant="contained" onClick={handleOpenReviewModal}>
                     Continue
                 </ContinueButton>
             </Content>
-            <Modal open={modalOpen} onClose={handleCloseModal}>
+            {/* Review Transaction Modal */}
+            <Modal open={reviewModalOpen} onClose={handleCloseReviewModal}>
                 <ModalContainer>
                     <Typography variant="h5" fontWeight="bold" mb={2}>
                         Review Your Account Information
@@ -240,18 +252,26 @@ const DepositMoneyPage = ({ selectedAccountType }: { selectedAccountType: Compon
                     >
                         {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Create Account'}
                     </Button>
-                    {callsStatus && <div> Status: {callsStatus.status}</div>}
+                    <Typography variant="body2" color="textSecondary">
+                        {callsStatus && <div> Status: {callsStatus.status}</div>}
+                    </Typography>
+                </ModalContainer>
+            </Modal>
+            {/* Transaction Confirmed Modal TODO: Make flow better*/}
+            <Modal open={confirmedModalOpen} onClose={handleCloseConfirmedModal}>
+                <ModalContainer>
+                    <Typography variant="h5" fontWeight="bold" mb={2}>
+                        Confirmed!
+                    </Typography>
                     <Button
                         fullWidth
                         variant="outlined"
-                        onClick={handleCloseModal}
+                        onClick={handleCloseConfirmedModal}
                         sx={{ padding: 2, borderRadius: 2, color: 'black', borderColor: 'black' }}
                         disabled={isLoading}
                     >
-                        Go Back
+                        Return to Home Page
                     </Button>
-                    {isLoading && <Typography variant="body2" color="textSecondary">Waiting for confirmation...</Typography>}
-                    {isConfirmed && <Typography variant="body2" color="textSecondary">Transaction confirmed.</Typography>}
                 </ModalContainer>
             </Modal>
         </Root>
