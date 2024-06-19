@@ -3,8 +3,9 @@ import { useState, useEffect } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
 import { contracts } from '../contracts/contracts';
 import { base } from 'viem/chains';
+import { ComponentAccountType } from '../types';
 
-export const useNewAccountAddress = () => {
+export const useNewAccountAddress = (selectedAccountType: ComponentAccountType) => {
     const [newAccountAddress, setNewAccountAddress] = useState<`0x${string}` | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -14,10 +15,10 @@ export const useNewAccountAddress = () => {
         abi: contracts.AccountFactory.abi,
         address: contracts.AccountFactory.address,
         functionName: 'determineNewAccountAddress',
-        args: address ? [address] as const : undefined,
+        args: address ? [address, selectedAccountType.strategyId] as const : undefined,
         chainId: base.id,
         query: {
-            enabled: !!address
+            enabled: !!address && selectedAccountType !== undefined
         }
     });
 
