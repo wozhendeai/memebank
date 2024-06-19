@@ -23,7 +23,7 @@ contract Account is Ownable {
     uint128 public accountId;
 
     /// @notice Emitted when collateral is deposited
-    event CollateralDeposited(address indexed token, int256 amount);
+    event CollateralDeposited(address indexed token, int256 amount, AccountFactory.StrategyType strategyType);
 
     /// @notice Emitted when an order is committed
     event OrderCommitted(
@@ -88,7 +88,7 @@ contract Account is Ownable {
         uint256 amount,
         uint128 synthMarketId
     ) external payable onlyOwner {
-        emit CollateralDeposited(address(sUSD), int256(amount));
+        emit CollateralDeposited(address(sUSD), int256(amount), strategyType);
         // TODO: add nice messages, i.e for less than 0 or more
         // Transfer sUSD tokens from the caller to the Account contract
         bool success = sUSD.transferFrom(msg.sender, address(this), amount);
@@ -102,7 +102,7 @@ contract Account is Ownable {
     }
 
     function modifyCollateralZap(uint256 amount) external payable onlyOwner {
-        emit CollateralDeposited(address(USDC), int256(amount));
+        emit CollateralDeposited(address(USDC), int256(amount), strategyType);
 
         // Check if the sender has enough USDC to send
         require(

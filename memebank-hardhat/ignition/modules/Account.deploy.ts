@@ -14,7 +14,8 @@ export default buildModule("DeployAccount", (m) => {
         ENGINE_ADDRESS,
         SUSD_ADDRESS,
         USDC_ADDRESS,
-        ACCOUNT_FACTORY
+        ACCOUNT_FACTORY,
+        0
     ]);
 
 
