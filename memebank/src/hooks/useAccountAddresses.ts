@@ -12,7 +12,7 @@ const useAccountAddresses = () => {
     functionName: 'getAccountsByUser',
     args: address ? [address] as const : undefined,
   });
-  console.log(error, isLoading)
+
   useEffect(() => {
     if (data) {
       setAccountAddresses([...data]);

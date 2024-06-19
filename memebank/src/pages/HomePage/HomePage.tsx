@@ -72,8 +72,7 @@ const data = [
 ];
 
 const HomePage = () => {
-  const { accounts, isLoading, } = useAccountData();
-  console.log(accounts)
+  const { accounts, totalBalance, isLoading, } = useAccountData();
 
   return (
     <Root>
@@ -81,10 +80,10 @@ const HomePage = () => {
         {/* "Your Savings" Header */}
         <Box width="100%" textAlign="left" mb={2}>
           <Typography variant="subtitle2" color="textSecondary">
-            Your savings
+            Your total account balance
           </Typography>
           <Typography variant="h4" color="green">
-            $62,988
+            ${totalBalance}
           </Typography>
           <Typography variant="subtitle2" color="textSecondary">
             This month you’ve saved $2,899 so far. <span style={{ color: 'green' }}>(25% more than last month)</span>

@@ -95,27 +95,28 @@ interface AccountType {
 }
 
 const DepositMoneyPage = ({ selectedAccountType }: { selectedAccountType: AccountType }) => {
+    const { address, chainId } = useAccount();
+    const { switchChainAsync } = useSwitchChain()
+    const { data: writeContractData, writeContracts, isSuccess: isConfirmed, isPending: writeContractIsPending, error: writeContractError } = useWriteContracts();
+    const { newAccountAddress, loading: newAccountAddressLoading, error: newAccountAddressError } = useNewAccountAddress();
+    
     const [accountName, setAccountName] = useState('Default Name');
     const [amount, setAmount] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
-    const { switchChainAsync } = useSwitchChain()
-
-    const { address, chainId } = useAccount();
-    const { isSuccess: isConfirmed, isPending: writeContractIsPending, writeContracts, data: id, error } = useWriteContracts();
-    const { newAccountAddress, loading: newAccountAddressLoading, error: newAccountAddressError } = useNewAccountAddress();
-
+    
     const { data: callsStatus } = useCallsStatus({
-        id: id as string,
+        id: writeContractData as string,
         query: {
-            enabled: !!id,
+            enabled: !!writeContractData,
             // Poll every second until the calls are confirmed
             refetchInterval: (data) =>
                 data.state.data?.status === "CONFIRMED" ? false : 1000,
         },
     });
 
-    const isLoading = newAccountAddressLoading || writeContractIsPending || (!!callsStatus ?? callsStatus?.status == 'PENDING');
-    console.log(`found addr: ` + newAccountAddress, `is loading: ` + isLoading)
+    const isLoading = newAccountAddressLoading || writeContractIsPending || (callsStatus?.status === 'PENDING');
+    // const isError = writeContractError || newAccountAddressError;
+
     const handleOpenModal = () => {
         setModalOpen(true);
     };
@@ -134,14 +135,8 @@ const DepositMoneyPage = ({ selectedAccountType }: { selectedAccountType: Accoun
 
         const amountToSend = parseUnits(amount, 6); // USDC has 6 decimal places
 
-        // const transactions = ;
-
-        // if (newAccountAddress) {
-        //     transactions.push();
-        // }
-
         // Trigger the transactions
-        console.error(error)
+        // TODO: Check 
         if (newAccountAddress)
             writeContracts({
                 contracts: [
@@ -161,16 +156,17 @@ const DepositMoneyPage = ({ selectedAccountType }: { selectedAccountType: Accoun
                         abi: contracts.Account.abi,
                         functionName: "modifyCollateralZap",
                         args: [amountToSend],
-                    }   
+                    }
                 ]
             });
-
     };
 
-    useEffect(() => {
-        console.log(`newAccountAddressError: ` + newAccountAddressError)
-        console.log(`write error: ` + error)
-    }, [error]);
+    // TODO: Redirect to homescreen
+    // TODO: Test when we update contracts [when we add strategy types]
+    // useEffect(() => {
+    //     console.log(`newAccountAddressError: ` + newAccountAddressError)
+    //     console.log(`write error: ` + error)
+    // }, [error, newAccountAddressError]);
 
     return (
         <Root>
