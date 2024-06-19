@@ -17,6 +17,7 @@ contract Account is Ownable {
     IERC20 public sUSD;
     IERC20 public USDC;
     AccountFactory public accountFactory;
+    AccountFactory.StrategyType public strategyType;
 
     // ACTOR's account id in the Synthetix v3 perps market
     uint128 public accountId;
@@ -41,13 +42,15 @@ contract Account is Ownable {
         IEngine _engine,
         IERC20 _sUSD,
         IERC20 _usdc,
-        AccountFactory _accountFactory
+        AccountFactory _accountFactory,
+        AccountFactory.StrategyType _strategyType
     ) Ownable(msg.sender) {
         perpsMarketProxy = _perpsMarketProxy;
         engine = _engine;
         sUSD = _sUSD;
         USDC = _usdc;
         accountFactory = _accountFactory;
+        strategyType = _strategyType;
 
         // Initiate a Synthetix v3 Account
         accountId = perpsMarketProxy.createAccount();
@@ -86,7 +89,7 @@ contract Account is Ownable {
         uint128 synthMarketId
     ) external payable onlyOwner {
         emit CollateralDeposited(address(sUSD), int256(amount));
-
+        // TODO: add nice messages, i.e for less than 0 or more
         // Transfer sUSD tokens from the caller to the Account contract
         bool success = sUSD.transferFrom(msg.sender, address(this), amount);
         require(success, "sUSD transfer failed");
@@ -100,6 +103,12 @@ contract Account is Ownable {
 
     function modifyCollateralZap(uint256 amount) external payable onlyOwner {
         emit CollateralDeposited(address(USDC), int256(amount));
+
+        // Check if the sender has enough USDC to send
+        require(
+            USDC.balanceOf(msg.sender) >= amount,
+            "Insufficient funds, click the gear icon to top up your USDC balance using Coinbase."
+        );
 
         // Transfer sUSD tokens from the caller to the Account contract
         bool success = USDC.transferFrom(msg.sender, address(this), amount);
@@ -156,10 +165,6 @@ contract Account is Ownable {
     function getTotalAccountBalance() external view returns (int256) {
         int256 totalAccountBalance = 0;
 
-        // Get the account's available margin
-        int256 availableMargin = perpsMarketProxy.getAvailableMargin(accountId);
-        totalAccountBalance += availableMargin;
-
         // Get the list of market IDs the account has open positions in
         uint256[] memory openPositionMarketIds = perpsMarketProxy
             .getAccountOpenPositions(accountId);
@@ -167,18 +172,22 @@ contract Account is Ownable {
         // Iterate through the open positions and add the remaining margin to the total balance
         for (uint256 i = 0; i < openPositionMarketIds.length; i++) {
             uint128 marketId = uint128(openPositionMarketIds[i]);
+            uint256 marketIndexPrice = perpsMarketProxy.indexPrice(marketId);
 
             (
                 int256 totalPnl,
                 int256 accruedFunding,
-                ,
-                uint256 owedInterest
+                int256 positionSize,
             ) = perpsMarketProxy.getOpenPosition(accountId, marketId);
 
-            int256 remainingMargin = totalPnl +
-                accruedFunding -
-                int256(owedInterest);
-            totalAccountBalance += remainingMargin;
+            // For purposes of calculating the value of an account, only abs(positionSize) matters
+            uint256 positivePositionSize = positionSize < 0
+                ? uint256(-positionSize)
+                : uint256(positionSize);
+
+            int256 positionValue = int256(positivePositionSize * marketIndexPrice) + totalPnl + accruedFunding;
+
+            totalAccountBalance += positionValue;
         }
 
         return totalAccountBalance;

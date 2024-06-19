@@ -53,6 +53,9 @@ interface IPerpsMarketProxy {
         view
         returns (int256 totalPnl, int256 accruedFunding, int128 positionSize, uint256 owedInterest);
 
+    /// @notice Gets a market's index price.
+    function indexPrice(uint128 marketId) external view returns (uint256);
+
     /// @notice Returns the address that owns a given account, as recorded by the system.
     /// @param accountId The account id whose owner is being retrieved.
     /// @return owner The owner of the given account id.

@@ -12,14 +12,14 @@ import { DeployAccountFactoryFixtureReturnType, deployAccountFactoryFixture } fr
 import { createNewAccountAndGetContract } from "./utils/createNewAccountAndGetContract";
 import { stealToken } from "./utils/stealToken";
 
-const depositAmount = ethers.parseUnits("100", COLLATERAL_DECIMALS); // 1000 USDC
+const depositAmount = ethers.parseUnits("1", COLLATERAL_DECIMALS); // 1000 USDC
 
 
 describe("Account Tests", function () {
 
   it("should have granted kwentas engine admin permission", async function () {
     const { accountFactory, actor, perpsMarketProxy } = await loadFixture(deployAccountFactoryFixture);
-    const createAccountTransaction = await accountFactory.connect(actor).createAccount();
+    const createAccountTransaction = await accountFactory.connect(actor).createAccount(0);
     const [newAccount,] = await createNewAccountAndGetContract(createAccountTransaction);
     const accountId = await newAccount.accountId();
 
@@ -43,7 +43,7 @@ describe("Account Tests", function () {
   // On mainnet, we zap using USDC
   it("should handle collateral deposits correctly", async function () {
     const { accountFactory, perpsMarketProxy, actor, actorAddress, collateral } = await loadFixture(deployAccountFactoryFixture) as DeployAccountFactoryFixtureReturnType;
-    const createAccountTransaction = await accountFactory.connect(actor).createAccount();
+    const createAccountTransaction = await accountFactory.connect(actor).createAccount(0);
     const [newAccount, newAccountAddress] = await createNewAccountAndGetContract(createAccountTransaction); // Use await properly
 
     // Transfer needed collateral to actor
@@ -83,7 +83,7 @@ describe("Account Tests", function () {
 
   it("should execute a trade and emit the OrderCommitted event", async function () {
     const { accountFactory, actor, actorAddress, collateral } = await loadFixture(deployAccountFactoryFixture) as DeployAccountFactoryFixtureReturnType;
-    const createAccountTransaction = await accountFactory.connect(actor).createAccount();
+    const createAccountTransaction = await accountFactory.connect(actor).createAccount(0);
     const [newAccount, newAccountAddress] = await createNewAccountAndGetContract(createAccountTransaction); // Use await properly
 
     // Transfer needed collateral to actor
@@ -99,7 +99,7 @@ describe("Account Tests", function () {
     // Trade data
     const perpsMarketId = 1200;
     const sizeDelta = 100;
-    const settlementStrategyId = 0;
+    const settlementStrategyId = 1; // 1 = BUY 2 = SELL
     const acceptablePrice = ethers.MaxUint256;
     const trackingCode = ethers.encodeBytes32String("TRACKING_CODE");
     const accountId = await newAccount.accountId();

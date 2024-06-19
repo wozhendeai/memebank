@@ -16,6 +16,19 @@ contract AccountFactory is Ownable {
     IERC20 public sUSD;
     IERC20 public USDC;
 
+    enum StrategyType {
+        AutoRebalanceMeme,
+        Dogs,
+        Cats
+    }
+
+    struct AccountData {
+        address accountAddress;
+        uint128 accountId;
+        int256 totalBalance;
+        StrategyType strategyType;
+    }
+
     /// @notice Mapping from user address to list of owned account addresses
     mapping(address => address[]) public userAccounts;
 
@@ -36,7 +49,7 @@ contract AccountFactory is Ownable {
 
     /// @notice Function to create a new account
     /// @return address The address of the newly created account
-    function createAccount() external returns (address) {
+    function createAccount(StrategyType _strategy) external returns (address) {
         bytes memory bytecode = type(Account).creationCode;
         bytecode = abi.encodePacked(
             bytecode,
@@ -45,7 +58,8 @@ contract AccountFactory is Ownable {
                 engine,
                 sUSD,
                 USDC,
-                AccountFactory(address(this))
+                AccountFactory(address(this)),
+                _strategy
             )
         );
 
@@ -66,8 +80,8 @@ contract AccountFactory is Ownable {
             )
         }
 
-        // Transfer ownership of SC to user
         Account newAccount = Account(newAccountAddress);
+        // Transfer ownership of SC to user
         newAccount.transferOwnership(msg.sender);
         // Add to list of new accounts
         userAccounts[msg.sender].push(newAccountAddress);
@@ -78,7 +92,8 @@ contract AccountFactory is Ownable {
 
     // Determines what the next address of account user creates will be
     function determineNewAccountAddress(
-        address sender
+        address sender,
+        StrategyType strategy
     ) public view returns (address) {
         bytes memory bytecode = type(Account).creationCode;
         bytecode = abi.encodePacked(
@@ -88,7 +103,8 @@ contract AccountFactory is Ownable {
                 engine,
                 sUSD,
                 USDC,
-                AccountFactory(address(this))
+                AccountFactory(address(this)),
+                strategy
             )
         );
         bytes32 salt = keccak256(
@@ -107,12 +123,23 @@ contract AccountFactory is Ownable {
         return address(uint160(uint256(hash)));
     }
 
-    /// @notice Retrieve all accounts associated with a user address.
+    /// @notice Retrieve all accounts associated with a user address along with detailed information.
     /// @param user The address of the user whose accounts we are retrieving.
-    /// @return A list of addresses representing all the accounts created by the user.
+    /// @return accounts Array of AccountData structs representing all the accounts created by the user.
     function getAccountsByUser(
         address user
-    ) external view returns (address[] memory) {
-        return userAccounts[user];
+    ) external view returns (AccountData[] memory accounts) {
+        address[] memory accountAddresses = userAccounts[user];
+        accounts = new AccountData[](accountAddresses.length);
+
+        for (uint i = 0; i < accountAddresses.length; i++) {
+            Account account = Account(accountAddresses[i]);
+            accounts[i] = AccountData({
+                accountAddress: accountAddresses[i],
+                accountId: account.accountId(),
+                totalBalance: account.getTotalAccountBalance(),
+                strategyType: account.strategyType()
+            });
+        }
     }
 }

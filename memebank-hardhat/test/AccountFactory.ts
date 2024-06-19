@@ -26,7 +26,7 @@ describe("AccountFactory Tests", function () {
 
     it("should emit an AccountCreated event with the new account address and creator address", async function () {
         const { accountFactory, actor } = await loadFixture(deployAccountFactoryFixture);
-        const tx = accountFactory.connect(actor).createAccount();
+        const tx = accountFactory.connect(actor).createAccount(0);
 
         await expect(tx)
             .to.emit(accountFactory, "AccountCreated")
@@ -35,42 +35,50 @@ describe("AccountFactory Tests", function () {
 
     it("should make user the owner of the new account contract", async function () {
         const { accountFactory, actor, actorAddress } = await loadFixture(deployAccountFactoryFixture) as DeployAccountFactoryFixtureReturnType;
-        const tx = await accountFactory.connect(actor).createAccount();
+        const tx = await accountFactory.connect(actor).createAccount(0);
         const [newAccountContract,] = await createNewAccountAndGetContract(tx);
 
         expect(await newAccountContract.owner()).to.equal(actorAddress);
     });
 
     // TODO: test getAccounts
-    it("should return the correct list of accounts for a user", async function () {
+    it("should return the correct list of accounts for a user with detailed information", async function () {
         const { accountFactory, actor, actorAddress } = await loadFixture(deployAccountFactoryFixture) as DeployAccountFactoryFixtureReturnType;
-
-        // Create multiple accounts for the user
-        const tx1 = await accountFactory.connect(actor).createAccount();
+    
+        // Create multiple accounts for the user with different strategies
+        const tx1 = await accountFactory.connect(actor).createAccount(0);
         const [,account1Address] = await createNewAccountAndGetContract(tx1);
-
-        const tx2 = await accountFactory.connect(actor).createAccount();
+    
+        const tx2 = await accountFactory.connect(actor).createAccount(1);
         const [,account2Address] = await createNewAccountAndGetContract(tx2);
-
-        const tx3 = await accountFactory.connect(actor).createAccount();
+    
+        const tx3 = await accountFactory.connect(actor).createAccount(2);
         const [,account3Address] = await createNewAccountAndGetContract(tx3);
-
-        // Call getAccountsByUser and check the returned list of accounts
-        const userAccounts = await accountFactory.getAccountsByUser(actorAddress);
-
-        expect(userAccounts).to.have.lengthOf(3);
-        expect(userAccounts).to.include(account1Address);
-        expect(userAccounts).to.include(account2Address);
-        expect(userAccounts).to.include(account3Address);
+    
+        // Call getAccountsByUser and check the returned list of AccountData structs
+        const accountsData = await accountFactory.getAccountsByUser(actorAddress);
+    
+        expect(accountsData).to.have.lengthOf(3);
+    
+        // Validate the data in the returned AccountData structs
+        // Check addresses
+        expect(accountsData.map(account => account.accountAddress)).to.deep.include.members([account1Address, account2Address, account3Address]);
+        // Check account IDs, total balances, and strategy types (assuming you can access these details)
+        accountsData.forEach(accountData => {
+            expect(accountData.accountId).to.be.a('bigint');
+            expect(accountData.totalBalance).to.be.a('bigint');
+            expect(Number(accountData.strategyType)).to.be.oneOf([0, 1, 2]); // Corresponding to the enum StrategyType
+        });
     });
-
+    
     it("should correctly predict the new account address", async function () {
         const { accountFactory, actor, actorAddress } = await loadFixture(deployAccountFactoryFixture) as DeployAccountFactoryFixtureReturnType;
+        const STRATEGY_TYPE = 0;
 
         // Predict the new account address
-        const predictedAddress = await accountFactory.determineNewAccountAddress(actorAddress);
+        const predictedAddress = await accountFactory.determineNewAccountAddress(actorAddress, STRATEGY_TYPE);
         // Create the new account
-        const tx = await accountFactory.connect(actor).createAccount();
+        const tx = await accountFactory.connect(actor).createAccount(STRATEGY_TYPE);
         const [newAccountContract, newAccountAddress] = await createNewAccountAndGetContract(tx);
     
         // Check if the predicted address matches the actual new account address
