@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Container, Box, Paper, TextField, Button, InputAdornment, Typography, Modal, CircularProgress } from '@mui/material';
 import { styled } from '@mui/system';
-import { SvgIconComponent } from '@mui/icons-material';
 import { useAccount, useSwitchChain, } from 'wagmi';
 // import { erc20Abi, parseUnits } from 'viem';
 import { Link, } from 'react-router-dom';
@@ -10,6 +9,7 @@ import { base } from 'viem/chains';
 import { contracts } from '../../contracts/contracts';
 import { erc20Abi, parseUnits } from 'viem';
 import { useNewAccountAddress } from '../../hooks/useNewAccountAddress';
+import { ComponentAccountType } from '../../types';
 
 const Root = styled(Container)(({ theme }) => ({
     minHeight: '100vh',
@@ -88,22 +88,17 @@ const ModalContainer = styled(Box)`
     box-sizing: border-box;
 `;
 
-interface AccountType {
-    title: string;
-    description: string;
-    icon: SvgIconComponent;
-}
-
-const DepositMoneyPage = ({ selectedAccountType }: { selectedAccountType: AccountType }) => {
+const DepositMoneyPage = ({ selectedAccountType }: { selectedAccountType: ComponentAccountType }) => {
     const { address, chainId } = useAccount();
     const { switchChainAsync } = useSwitchChain()
     const { data: writeContractData, writeContracts, isSuccess: isConfirmed, isPending: writeContractIsPending, error: writeContractError } = useWriteContracts();
-    const { newAccountAddress, loading: newAccountAddressLoading, error: newAccountAddressError } = useNewAccountAddress();
-    
+    const { newAccountAddress, loading: newAccountAddressLoading, error: newAccountAddressError } = useNewAccountAddress(selectedAccountType);
+
     const [accountName, setAccountName] = useState('Default Name');
     const [amount, setAmount] = useState('');
+    const [amountError, setAmountError] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
-    
+
     const { data: callsStatus } = useCallsStatus({
         id: writeContractData as string,
         query: {
@@ -115,7 +110,14 @@ const DepositMoneyPage = ({ selectedAccountType }: { selectedAccountType: Accoun
     });
 
     const isLoading = newAccountAddressLoading || writeContractIsPending || (callsStatus?.status === 'PENDING');
-    // const isError = writeContractError || newAccountAddressError;
+    const isError = writeContractError || newAccountAddressError;
+    isError ?? console.log(writeContractError, newAccountAddressError);
+    
+    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setAmount(value);
+        setAmountError(Number(value) <= 0);
+    };
 
     const handleOpenModal = () => {
         setModalOpen(true);
@@ -143,7 +145,8 @@ const DepositMoneyPage = ({ selectedAccountType }: { selectedAccountType: Accoun
                     {
                         address: contracts.AccountFactory.address,
                         abi: contracts.AccountFactory.abi,
-                        functionName: "createAccount"
+                        functionName: "createAccount",
+                        args: [selectedAccountType.strategyId]
                     },
                     {
                         address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // USDC contract address
@@ -191,7 +194,9 @@ const DepositMoneyPage = ({ selectedAccountType }: { selectedAccountType: Accoun
                             label="Enter Amount"
                             type="number"
                             value={amount}
-                            onChange={(e) => setAmount(e.target.value)}
+                            onChange={handleAmountChange}
+                            error={amountError}
+                            helperText={amountError ? "Amount must be greater than zero." : ""}
                         />
                     </InputBox>
                 </FormContainer>

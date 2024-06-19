@@ -2,36 +2,11 @@ import { useState } from 'react';
 import { Container, Box, Typography, Paper, Grid, IconButton } from '@mui/material';
 import { styled } from '@mui/system';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import PersonIcon from '@mui/icons-material/Person';
-import GroupIcon from '@mui/icons-material/Group';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { SvgIconComponent } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import DepositMoneyPage from './DepositMoneyPage';
-
-interface AccountType {
-    title: string;
-    description: string;
-    icon: SvgIconComponent;
-}
-
-const accountTypes: AccountType[] = [
-    {
-        title: "Weekly Outperformers",
-        description: "Auto-rebalancing account invested in the top weekly performing memecoins",
-        icon: PersonIcon,
-    },
-    {
-        title: "Dog Basket",
-        description: "Buy a basket of the top dog coins",
-        icon: GroupIcon,
-    },
-    {
-        title: "Political Coins",
-        description: "Buy a basket of the top political coins",
-        icon: GroupIcon,
-    },
-];
+import { accountTypes, ComponentAccountType as AccountType } from '../../types'; 
 
 const Root = styled(Container)(({ theme }) => ({
     minHeight: '100vh',
@@ -200,6 +175,7 @@ const CreateAccountPage = () => {
                         </Grid>
                     ))}
                 </Grid>
+                {/* TODO: Remove hover effect */}
                 <Card>
                     <Title variant="h6" fontWeight="bold">
                         How it works

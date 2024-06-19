@@ -8,11 +8,11 @@ import Box from '@mui/material/Box';
 import { styled } from '@mui/system';
 import { LinePlot } from '@mui/x-charts/LineChart';
 import { ResponsiveChartContainer } from '@mui/x-charts';
-import TravelIcon from '@mui/icons-material/FlightTakeoff';
 import HomeNavbar from '../../components/HomeNavbar/HomeNavbar';
 import Skeleton from '@mui/material/Skeleton';
 import withAuthRedirect from '../../components/AuthRedirect/withAuthRedirect';
-import useAccountData from '../../hooks/useAccountData'; // Import your custom hook
+import useAccountData from '../../hooks/useAccountsData';
+import HomeAccountCard from '../../components/HomeAccountCard/HomeAccountCard';
 
 const Root = styled(Container)(({ theme }) => ({
   minHeight: '100vh',
@@ -164,14 +164,12 @@ const HomePage = () => {
           ) : (
             accounts.map(account => (
               <Grid item xs={12} sm={6} key={account.address}>
-                <AccountCard>
-                  <TravelIcon style={{ fontSize: 40 }} />
-                  <Typography variant="h6">Account</Typography>
-                  <Typography variant="h5">${account.value.toString()}</Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    Some more details here
-                  </Typography>
-                </AccountCard>
+                <HomeAccountCard
+                  address={account.address}
+                  accountId={account.accountId}
+                  totalBalance={account.totalBalance}
+                  strategyType={account.strategyType}
+                />
               </Grid>
             ))
           )}
@@ -179,6 +177,7 @@ const HomePage = () => {
       </Content>
 
       <HomeNavbar />
+
     </Root>
   );
 };
