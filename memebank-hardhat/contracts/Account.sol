@@ -163,33 +163,6 @@ contract Account is Ownable {
 
     // Fetches value of an account
     function getTotalAccountBalance() external view returns (int256) {
-        int256 totalAccountBalance = 0;
-
-        // Get the list of market IDs the account has open positions in
-        uint256[] memory openPositionMarketIds = perpsMarketProxy
-            .getAccountOpenPositions(accountId);
-
-        // Iterate through the open positions and add the remaining margin to the total balance
-        for (uint256 i = 0; i < openPositionMarketIds.length; i++) {
-            uint128 marketId = uint128(openPositionMarketIds[i]);
-            uint256 marketIndexPrice = perpsMarketProxy.indexPrice(marketId);
-
-            (
-                int256 totalPnl,
-                int256 accruedFunding,
-                int256 positionSize,
-            ) = perpsMarketProxy.getOpenPosition(accountId, marketId);
-
-            // For purposes of calculating the value of an account, only abs(positionSize) matters
-            uint256 positivePositionSize = positionSize < 0
-                ? uint256(-positionSize)
-                : uint256(positionSize);
-
-            int256 positionValue = int256(positivePositionSize * marketIndexPrice) + totalPnl + accruedFunding;
-
-            totalAccountBalance += positionValue;
-        }
-
-        return totalAccountBalance;
+        return perpsMarketProxy.getAvailableMargin(accountId);
     }
 }
