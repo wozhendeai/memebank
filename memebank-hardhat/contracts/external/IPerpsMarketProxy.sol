@@ -9,6 +9,12 @@ interface IPerpsMarketProxy {
                              ACCOUNT MODULE
     //////////////////////////////////////////////////////////////*/
 
+    // @notice Gets the account's collaterals ids TODO: Confirm calldata or memory
+    function getAccountCollateralIds(uint128 accountId) external view returns (uint256[] memory);
+
+    // @notice Gets the account's collateral value for a specific collateral.
+    function getCollateralAmount(uint128 accountId, uint128 synthMarketId) external view returns (uint256);
+
     function getAvailableMargin(
         uint128 accountId
     ) external view returns (int256 availableMargin);

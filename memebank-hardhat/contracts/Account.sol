@@ -23,7 +23,16 @@ contract Account is Ownable {
     uint128 public accountId;
 
     /// @notice Emitted when collateral is deposited
-    event CollateralDeposited(address indexed token, int256 amount, AccountFactory.StrategyType strategyType);
+    event CollateralDeposited(
+        address indexed token,
+        int256 amount,
+        AccountFactory.StrategyType strategyType
+    );
+    event CollateralWithdrawn(
+        address indexed token,
+        int256 amount,
+        AccountFactory.StrategyType strategyType
+    );
 
     /// @notice Emitted when an order is committed
     event OrderCommitted(
@@ -82,43 +91,75 @@ contract Account is Ownable {
 
     /// @notice Function to approve and deposit collateral
     /// @param amount The amount of collateral to deposit
-    // One issue is only 'sUSD' and 'USDC' is deposit-able because of the approvals
-    // We can add an approve function or leave it - these are probably enough
     function modifyCollateral(
-        uint256 amount,
+        int256 amount,
         uint128 synthMarketId
     ) external payable onlyOwner {
-        emit CollateralDeposited(address(sUSD), int256(amount), strategyType);
-        // TODO: add nice messages, i.e for less than 0 or more
-        // Transfer sUSD tokens from the caller to the Account contract
-        bool success = sUSD.transferFrom(msg.sender, address(this), amount);
-        require(success, "sUSD transfer failed");
+        if (amount > 0) {
+            // collateral deposited
+            emit CollateralDeposited(
+                address(sUSD),
+                int256(amount),
+                strategyType
+            );
+            // unsafe typecast or is it? cause its definitely positive
+            bool success = sUSD.transferFrom(msg.sender, address(this), uint256(amount));
+            require(success, "sUSD transfer failed");
+        } else {
+            // collateral withdrawn, don't need to request transfer from user
+            emit CollateralWithdrawn(
+                address(sUSD),
+                int256(amount),
+                strategyType
+            );
+        }
 
         engine.modifyCollateral({
             _accountId: accountId,
-            _amount: int256(amount),
+            _amount: amount,
             _synthMarketId: synthMarketId
         });
     }
 
-    function modifyCollateralZap(uint256 amount) external payable onlyOwner {
-        emit CollateralDeposited(address(USDC), int256(amount), strategyType);
+    function modifyCollateralZap(int256 amount) external payable onlyOwner {
+        if (amount > 0) {
+            console.log("Depositing...");
+            // Deposit into Kwenta
+            emit CollateralDeposited(address(USDC), amount, strategyType);
 
-        // Check if the sender has enough USDC to send
-        require(
-            USDC.balanceOf(msg.sender) >= amount,
-            "Insufficient funds, click the gear icon to top up your USDC balance using Coinbase."
-        );
+            // Check if the sender has enough USDC to send
+            require(
+                int256(USDC.balanceOf(msg.sender)) >= amount,
+                "Insufficient funds, click the gear icon to top up your USDC balance using Coinbase."
+            );
 
-        // Transfer sUSD tokens from the caller to the Account contract
-        bool success = USDC.transferFrom(msg.sender, address(this), amount);
-        require(success, "USDC transfer failed");
+            // Transfer sUSD tokens from the caller to the Account contract
+            bool success = USDC.transferFrom(
+                msg.sender,
+                address(this),
+                uint256(amount)
+            );
+            require(success, "USDC transfer failed");
 
-        // TODO: Maybe make synMarketId a param
-        engine.modifyCollateralZap({
-            _accountId: accountId,
-            _amount: int256(amount)
-        });
+            engine.modifyCollateralZap({
+                _accountId: accountId,
+                _amount: amount
+            });
+            console.log("Deposited");
+        } else if (amount < 0) {
+            console.log("Withdrawal pending...");
+            // Withdraw from kwenta
+            emit CollateralWithdrawn(address(USDC), amount, strategyType);
+
+            // TODO: Check if user has any balance to withdraw
+            engine.modifyCollateralZap({
+                _accountId: accountId,
+                _amount: amount
+            });
+            console.log("Withdrawed");
+        } else if (amount == 0) {
+            // throw cant be 0 error
+        }
     }
 
     /// @notice Function to execute a trade on Kwenta
@@ -134,7 +175,7 @@ contract Account is Ownable {
         uint256 acceptablePrice,
         bytes32 trackingCode
     )
-        external
+        public
         onlyOwner
         returns (IPerpsMarketProxy.Data memory retOrder, uint256 fees)
     {
@@ -159,6 +200,64 @@ contract Account is Ownable {
             trackingCode,
             fees
         );
+    }
+
+    // TODO: Check gas difference of internal and debate if its worth it
+    function closePosition(uint128 marketId) public onlyOwner {
+        (
+            ,
+            ,
+            int128 positionSize
+            ,
+        ) = perpsMarketProxy.getOpenPosition(accountId, marketId);
+        uint256 acceptablePrice = perpsMarketProxy.indexPrice(marketId);
+
+        executeTrade(marketId, -positionSize, 0, acceptablePrice, bytes32(0));
+    }
+
+    function closeAllPositions() external onlyOwner {
+        uint256[] memory openPositionMarketIds = perpsMarketProxy.getAccountOpenPositions(accountId);
+        for(uint256 i = 0; i < openPositionMarketIds.length; i++) {
+            uint256 marketId = openPositionMarketIds[i];
+            
+            closePosition(uint128(marketId)); // Add safe cast?
+        }
+    }
+
+
+    // @notice Get's all the collateral a user has
+    function getAllCollateral() public view returns (uint256[] memory, uint256[] memory) {
+        uint256[] memory collateralIds = perpsMarketProxy.getAccountCollateralIds(accountId);
+        uint256[] memory collateralAmounts = new uint256[](collateralIds.length);
+
+        for (uint256 i = 0; i < collateralIds.length; i++) {
+            collateralAmounts[i] = perpsMarketProxy.getCollateralAmount(accountId, uint128(collateralIds[i]));
+        }
+
+        return (collateralIds, collateralAmounts);
+    }
+
+    function closeAllAndWithdraw() external onlyOwner {
+        this.closeAllPositions();
+
+        // Get all collateral a user has
+        (uint256[] memory collateralIds, uint256[] memory collateralAmounts) = getAllCollateral();
+        
+        // Withdraw each type of collateral
+        for (uint256 i = 0; i < collateralIds.length; i++) {
+            uint128 synthMarketId = uint128(collateralIds[i]);
+            int256 collateralAmount = int256(collateralAmounts[i]);
+
+            this.modifyCollateral(-collateralAmount, synthMarketId);
+        }
+    }
+
+    // Utility function incase funds get stuck
+    function withdrawToken(address erc20) external onlyOwner {
+        IERC20 token = IERC20(erc20);
+        uint256 tokenBalance = token.balanceOf(address(this));
+        require(tokenBalance > 0, "Account doesn't have this token");
+        IERC20(erc20).transfer(owner(), tokenBalance);
     }
 
     // Fetches value of an account

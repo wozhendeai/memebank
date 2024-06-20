@@ -65,7 +65,7 @@ describe("Account Tests", function () {
       // If we're on mainnet, we can use `modifyCollateralZap` and deposit USDC directly
       await expect(newAccount.connect(actor).modifyCollateralZap(depositAmount))
         .to.emit(newAccount, "CollateralDeposited")
-        .withArgs(COLLATERAL_ADDRESS, depositAmount);
+        .withArgs(COLLATERAL_ADDRESS, depositAmount, 0);
     }
 
     // Ensure user has collateral
@@ -81,6 +81,35 @@ describe("Account Tests", function () {
     expect(availableMargin).to.be.equal(standardizedDepositAmount);
   });
 
+  it("should handle collateral withdrawals correctly", async function () {
+    const { accountFactory, actor, perpsMarketProxy, collateral, COLLATERAL_ADDRESS } = await loadFixture(deployAccountFactoryFixture);
+    const createAccountTransaction = await accountFactory.connect(actor).createAccount(0);
+    const [newAccount, newAccountAddress] = await createNewAccountAndGetContract(createAccountTransaction);
+    const accountId = await newAccount.accountId();
+  
+    // Assume COLLATERAL_ADDRESS and depositAmount are defined as per the deposit test
+    // Transfer needed collateral to actor for depositing
+    await stealToken(collateral, actor, depositAmount); // depositing twice the amount to test withdrawal later
+  
+    // Approve the account to use the collateral
+    await collateral.connect(actor).approve(newAccountAddress, depositAmount);
+    await newAccount.connect(actor).modifyCollateralZap(depositAmount);
+  
+    // Deposit is successful, now try to withdraw
+    const withdrawAmount = depositAmount; // withdraw half the deposited amount
+    await expect(newAccount.connect(actor).modifyCollateralZap(-withdrawAmount))
+      .to.emit(newAccount, "CollateralWithdrawn")
+      .withArgs(COLLATERAL_ADDRESS, withdrawAmount, 0);
+  
+    // Check the final collateral balance in the account
+    const finalCollateralBalance = await perpsMarketProxy.getAvailableMargin(accountId);
+    expect(finalCollateralBalance).to.equal(0);
+  
+    // Verify the withdrawal does not allow the account to withdraw more than deposited
+    await expect(newAccount.connect(actor).modifyCollateral(depositAmount, accountId))
+      .to.be.revertedWith("InsufficientCollateral");
+  });
+  
   it("should execute a trade and emit the OrderCommitted event", async function () {
     const { accountFactory, actor, actorAddress, collateral } = await loadFixture(deployAccountFactoryFixture) as DeployAccountFactoryFixtureReturnType;
     const createAccountTransaction = await accountFactory.connect(actor).createAccount(0);
