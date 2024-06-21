@@ -1,5 +1,5 @@
 import { ethers } from "hardhat";
-import { PERPS_MARKET_PROXY_ADDRESS, ENGINE_ADDRESS, SUSD_ADDRESS, USDC_ADDRESS, COLLATERAL_ADDRESS } from "./Constants";
+import { PERPS_MARKET_PROXY_ADDRESS, ENGINE_ADDRESS, SUSD_ADDRESS, USDC_ADDRESS, COLLATERAL_ADDRESS, SNX_ADDRESS } from "./Constants";
 import { AccountFactory, IPerpsMarketProxy, IEngine, IERC20 } from "../../typechain-types";
 import { Signer } from "ethers";
 
@@ -9,6 +9,7 @@ export type DeployAccountFactoryFixtureReturnType = {
   engine: IEngine;
   sUSD: IERC20;
   USDC: IERC20;
+  snxUSD: IERC20;
   collateral: IERC20;
   owner: Signer;
   actor: Signer;
@@ -22,7 +23,8 @@ export async function deployAccountFactoryFixture(): Promise<DeployAccountFactor
     PERPS_MARKET_PROXY_ADDRESS,
     ENGINE_ADDRESS,
     SUSD_ADDRESS,
-    USDC_ADDRESS
+    USDC_ADDRESS,
+    SNX_ADDRESS
   );
   await accountFactory.waitForDeployment();
 
@@ -32,6 +34,7 @@ export async function deployAccountFactoryFixture(): Promise<DeployAccountFactor
   const USDC = await ethers.getContractAt("IERC20", USDC_ADDRESS);
   const collateral = await ethers.getContractAt("IERC20", COLLATERAL_ADDRESS);
   const actorAddress = await actor.getAddress();
+  const snxUSD = await ethers.getContractAt("IERC20", SNX_ADDRESS);
 
-  return { accountFactory, perpsMarketProxy, engine, sUSD, USDC, collateral, owner, actor, actorAddress };
+  return { accountFactory, perpsMarketProxy, engine, sUSD, USDC, snxUSD, collateral, owner, actor, actorAddress };
 }

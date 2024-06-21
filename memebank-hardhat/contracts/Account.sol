@@ -16,6 +16,7 @@ contract Account is Ownable {
     IEngine public engine;
     IERC20 public sUSD;
     IERC20 public USDC;
+    IERC20 public snxUSD;
     AccountFactory public accountFactory;
     AccountFactory.StrategyType public strategyType;
 
@@ -51,6 +52,7 @@ contract Account is Ownable {
         IEngine _engine,
         IERC20 _sUSD,
         IERC20 _usdc,
+        IERC20 _snxUSD,
         AccountFactory _accountFactory,
         AccountFactory.StrategyType _strategyType
     ) Ownable(msg.sender) {
@@ -58,6 +60,7 @@ contract Account is Ownable {
         engine = _engine;
         sUSD = _sUSD;
         USDC = _usdc;
+        snxUSD = _snxUSD;
         accountFactory = _accountFactory;
         strategyType = _strategyType;
 
@@ -79,14 +82,22 @@ contract Account is Ownable {
         });
 
         // Approve the Engine to manage collateral
+        // TODO: Check if sUSD approval is necessary
         require(
             sUSD.approve(address(engine), type(uint256).max),
             "sUSD approval failed"
         );
+        // For `modifyCollateralZap`
         require(
             USDC.approve(address(engine), type(uint256).max),
             "sUSD approval failed"
         );
+        // For `modifyCollateral`, at this time only snxUSD is supported as perp collateral
+        require(
+            snxUSD.approve(address(engine), type(uint256).max),
+            "sUSD approval failed"
+        );
+
     }
 
     /// @notice Function to approve and deposit collateral
@@ -103,12 +114,16 @@ contract Account is Ownable {
                 strategyType
             );
             // unsafe typecast or is it? cause its definitely positive
-            bool success = sUSD.transferFrom(msg.sender, address(this), uint256(amount));
-            require(success, "sUSD transfer failed");
+            bool success = snxUSD.transferFrom(
+                msg.sender,
+                address(this),
+                uint256(amount)
+            );
+            require(success, "snxUSD transfer failed");
         } else {
             // collateral withdrawn, don't need to request transfer from user
             emit CollateralWithdrawn(
-                address(sUSD),
+                address(snxUSD),
                 int256(amount),
                 strategyType
             );
@@ -122,6 +137,7 @@ contract Account is Ownable {
     }
 
     function modifyCollateralZap(int256 amount) external payable onlyOwner {
+        require(!(amount == 0), "Amount cannot be zero");
         if (amount > 0) {
             console.log("Depositing...");
             // Deposit into Kwenta
@@ -151,14 +167,23 @@ contract Account is Ownable {
             // Withdraw from kwenta
             emit CollateralWithdrawn(address(USDC), amount, strategyType);
 
-            // TODO: Check if user has any balance to withdraw
+            // In order for the withdrawal to work here, the user must have snxUSD collateral
+            uint128 snxUSDMarketId = 0;
+            uint256 collateralAmount = perpsMarketProxy.getCollateralAmount(
+                accountId,
+                snxUSDMarketId
+            );
+            require(amount > type(int256).min, "Withdrawal amount too large");
+            require(
+                collateralAmount >= uint256(-amount),
+                "Insufficient collateral for withdrawal"
+            );
+
             engine.modifyCollateralZap({
                 _accountId: accountId,
                 _amount: amount
             });
             console.log("Withdrawed");
-        } else if (amount == 0) {
-            // throw cant be 0 error
         }
     }
 
@@ -204,34 +229,42 @@ contract Account is Ownable {
 
     // TODO: Check gas difference of internal and debate if its worth it
     function closePosition(uint128 marketId) public onlyOwner {
-        (
-            ,
-            ,
-            int128 positionSize
-            ,
-        ) = perpsMarketProxy.getOpenPosition(accountId, marketId);
+        (, , int128 positionSize, ) = perpsMarketProxy.getOpenPosition(
+            accountId,
+            marketId
+        );
         uint256 acceptablePrice = perpsMarketProxy.indexPrice(marketId);
 
         executeTrade(marketId, -positionSize, 0, acceptablePrice, bytes32(0));
     }
 
     function closeAllPositions() external onlyOwner {
-        uint256[] memory openPositionMarketIds = perpsMarketProxy.getAccountOpenPositions(accountId);
-        for(uint256 i = 0; i < openPositionMarketIds.length; i++) {
+        uint256[] memory openPositionMarketIds = perpsMarketProxy
+            .getAccountOpenPositions(accountId);
+        for (uint256 i = 0; i < openPositionMarketIds.length; i++) {
             uint256 marketId = openPositionMarketIds[i];
-            
+
             closePosition(uint128(marketId)); // Add safe cast?
         }
     }
 
-
     // @notice Get's all the collateral a user has
-    function getAllCollateral() public view returns (uint256[] memory, uint256[] memory) {
-        uint256[] memory collateralIds = perpsMarketProxy.getAccountCollateralIds(accountId);
-        uint256[] memory collateralAmounts = new uint256[](collateralIds.length);
+    function getAllCollateral()
+        public
+        view
+        returns (uint256[] memory, uint256[] memory)
+    {
+        uint256[] memory collateralIds = perpsMarketProxy
+            .getAccountCollateralIds(accountId);
+        uint256[] memory collateralAmounts = new uint256[](
+            collateralIds.length
+        );
 
         for (uint256 i = 0; i < collateralIds.length; i++) {
-            collateralAmounts[i] = perpsMarketProxy.getCollateralAmount(accountId, uint128(collateralIds[i]));
+            collateralAmounts[i] = perpsMarketProxy.getCollateralAmount(
+                accountId,
+                uint128(collateralIds[i])
+            );
         }
 
         return (collateralIds, collateralAmounts);
@@ -241,8 +274,11 @@ contract Account is Ownable {
         this.closeAllPositions();
 
         // Get all collateral a user has
-        (uint256[] memory collateralIds, uint256[] memory collateralAmounts) = getAllCollateral();
-        
+        (
+            uint256[] memory collateralIds,
+            uint256[] memory collateralAmounts
+        ) = getAllCollateral();
+
         // Withdraw each type of collateral
         for (uint256 i = 0; i < collateralIds.length; i++) {
             uint128 synthMarketId = uint128(collateralIds[i]);

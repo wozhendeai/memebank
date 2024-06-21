@@ -15,6 +15,7 @@ contract AccountFactory is Ownable {
     IEngine public engine;
     IERC20 public sUSD;
     IERC20 public USDC;
+    IERC20 public snxUSD;
 
     enum StrategyType {
         AutoRebalanceMeme,
@@ -39,12 +40,14 @@ contract AccountFactory is Ownable {
         address _perpsMarketProxyAddress,
         address _engineAddress,
         address _sUSDAddress,
-        address _usdcAddress
+        address _usdcAddress,
+        address _snxUSDAddress
     ) Ownable(msg.sender) {
         perpsMarketProxy = IPerpsMarketProxy(_perpsMarketProxyAddress);
         engine = IEngine(_engineAddress);
         sUSD = IERC20(_sUSDAddress);
         USDC = IERC20(_usdcAddress);
+        snxUSD = IERC20(_snxUSDAddress);
     }
 
     /// @notice Function to create a new account
@@ -58,6 +61,7 @@ contract AccountFactory is Ownable {
                 engine,
                 sUSD,
                 USDC,
+                snxUSD,
                 AccountFactory(address(this)),
                 _strategy
             )
@@ -103,6 +107,7 @@ contract AccountFactory is Ownable {
                 engine,
                 sUSD,
                 USDC,
+                snxUSD,
                 AccountFactory(address(this)),
                 strategy
             )
