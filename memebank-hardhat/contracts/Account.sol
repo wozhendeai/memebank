@@ -168,12 +168,16 @@ contract Account is Ownable {
             emit CollateralWithdrawn(address(USDC), amount, strategyType);
 
             // In order for the withdrawal to work here, the user must have snxUSD collateral
+            // snxUSD is the only collateral supported right now for perps
             uint128 snxUSDMarketId = 0;
             uint256 collateralAmount = perpsMarketProxy.getCollateralAmount(
                 accountId,
                 snxUSDMarketId
             );
+            console.log(collateralAmount);
             require(amount > type(int256).min, "Withdrawal amount too large");
+            // Make amount positive to see if they have the collateral amount they're trying to withdraw
+            // TODO: Do this more like engine/perpsMarketProxy
             require(
                 collateralAmount >= uint256(-amount),
                 "Insufficient collateral for withdrawal"

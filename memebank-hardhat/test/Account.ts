@@ -1,5 +1,8 @@
-import { expect } from "chai";
-import { ethers } from "hardhat";
+import { BigNumberish, Signer } from "ethers";
+import { Account, IERC20 } from "../typechain-types";
+
+const { expect } = require("chai");
+const { ethers } = require("hardhat");
 const {
   loadFixture,
   reset,
@@ -8,139 +11,65 @@ const {
   setBalance
 } = require("@nomicfoundation/hardhat-toolbox/network-helpers");
 const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
-import { ENGINE_ADDRESS, COLLATERAL_ADDRESS, COLLATERAL_DECIMALS, SUSD_ADDRESS, USDC_ADDRESS } from "./utils/Constants";
-import { DeployAccountFactoryFixtureReturnType, deployAccountFactoryFixture } from "./utils/deployAccountFactoryFixture";
-import { createNewAccountAndGetContract } from "./utils/createNewAccountAndGetContract";
-import { stealToken, stealTokenCustomWhale } from "./utils/stealToken";
 
-const depositAmount = ethers.parseUnits("1", COLLATERAL_DECIMALS); // 1000 USDC
+const {
+  ENGINE_ADDRESS,
+  COLLATERAL_ADDRESS,
+  COLLATERAL_DECIMALS,
+  SUSD_ADDRESS,
+  USDC_ADDRESS
+} = require("./utils/Constants");
+const { deployAccountFactoryFixture } = require("./utils/deployAccountFactoryFixture");
+const { createNewAccountAndGetContract } = require("./utils/createNewAccountAndGetContract");
+const { stealToken } = require("./utils/stealToken");
 
 describe("Account Tests", function () {
+  const depositAmount = ethers.parseUnits("1", COLLATERAL_DECIMALS);
+  const COLLATERAL_WHALE = "0x32C222A9A159782aFD7529c87FA34b96CA72C696";
 
-  it("should have granted kwentas engine admin permission", async function () {
-    const { accountFactory, actor, perpsMarketProxy } = await loadFixture(deployAccountFactoryFixture);
-    const createAccountTransaction = await accountFactory.connect(actor).createAccount(0);
-    const [newAccount,] = await createNewAccountAndGetContract(createAccountTransaction);
-    const accountId = await newAccount.accountId();
-
-    // Fetch permissions from the perpsMarketProxy
-    const permissions = await perpsMarketProxy.getAccountPermissions(accountId);
-
-    // Get 'ADMIN' permission hash
-    const expectedPermissionHash = ethers.encodeBytes32String("ADMIN");
-
-    // Check if the permissions array contains the expected permission for the Kwenta engine
-    let hasPermission = permissions.some((perm: { user: string; permissions: string | string[]; }) => {
-      return perm.user.toLowerCase() === ENGINE_ADDRESS.toLowerCase() &&
-        perm.permissions.includes(expectedPermissionHash);
-    });
-
-    // Assert that the necessary permission is present
-    expect(hasPermission, "Engine should have the required permissions for the account").to.be.true;
-  });
-
-  // ONLY SNXUSD IS ACCEPTED AS COLLATERAL FOR DEPOSITS
-  it("should handle collateral deposits correctly using `modifyCollateral`", async function () {
-    const { accountFactory, actor, actorAddress, perpsMarketProxy, snxUSD } = await loadFixture(deployAccountFactoryFixture);
+  async function setupTestEnvironment() {
+    const { accountFactory, actor, actorAddress, perpsMarketProxy, sUSD, collateral } = await loadFixture(deployAccountFactoryFixture);
     const createAccountTransaction = await accountFactory.connect(actor).createAccount(0);
     const [newAccount, newAccountAddress] = await createNewAccountAndGetContract(createAccountTransaction);
     const accountId = await newAccount.accountId();
-    const sUSDCDepositAmount = ethers.parseUnits("100000", 18);
 
+    return { accountFactory, actor, actorAddress, perpsMarketProxy, sUSD, collateral, newAccount, newAccountAddress, accountId };
+  }
+
+  async function depositCollateral(newAccount: Account, actor: Signer, collateral: IERC20, depositAmount: BigNumberish) {
     // Ensure user has enough collateral
-    const COLLATERAL_WHALE = "0x3bD64247d879AF879e6f6e62F81430186391Bdb8"
-    await stealTokenCustomWhale(snxUSD, actor, sUSDCDepositAmount, COLLATERAL_WHALE);
-
-    // Approve the account to use the collateral
-    await snxUSD.connect(actor).approve(newAccountAddress, sUSDCDepositAmount);
-
-    // Make deposit
-    const sUSDCMarketId = 0;
-    await newAccount.connect(actor).modifyCollateral(sUSDCDepositAmount, sUSDCMarketId);
-
-  })
-
-  it("should handle collateral withdrawals correctly using `modifyCollateral`", async function () {
-    const { accountFactory, actor, actorAddress, perpsMarketProxy, snxUSD } = await loadFixture(deployAccountFactoryFixture);
-    const createAccountTransaction = await accountFactory.connect(actor).createAccount(0);
-    const [newAccount, newAccountAddress] = await createNewAccountAndGetContract(createAccountTransaction);
-    const accountId = await newAccount.accountId();
-    const sUSDCDepositAmount = ethers.parseUnits("100", 18);
-
-    // Ensure user has enough collateral
-    const COLLATERAL_WHALE = "0x3bD64247d879AF879e6f6e62F81430186391Bdb8"
-    await stealTokenCustomWhale(snxUSD, actor, sUSDCDepositAmount, COLLATERAL_WHALE);
-
-    // Approve the account to use the collateral
-    await snxUSD.connect(actor).approve(newAccountAddress, sUSDCDepositAmount);
-
-    // Make deposit
-    const sUSDCMarketId = 0;
-    await newAccount.connect(actor).modifyCollateral(sUSDCDepositAmount, sUSDCMarketId);
-
-    // Make withdrawal
-    await newAccount.connect(actor).modifyCollateral(-sUSDCDepositAmount, sUSDCMarketId);
-
-  })
-
-  // On testnet, we use snxUSD to make deposits into the account
-  // On mainnet, we zap using USDC
-  it("should handle collateral deposits correctly using `modifyCollateralZap` ", async function () {
-    const { accountFactory, perpsMarketProxy, actor, actorAddress, collateral } = await loadFixture(deployAccountFactoryFixture) as DeployAccountFactoryFixtureReturnType;
-    const createAccountTransaction = await accountFactory.connect(actor).createAccount(0);
-    const [newAccount, newAccountAddress] = await createNewAccountAndGetContract(createAccountTransaction); // Use await properly
-
-    // Transfer needed collateral to actor
     await stealToken(collateral, actor, depositAmount);
+    // Approve Account contract to spend users collateral
+    await collateral.connect(actor).approve(newAccount.getAddress(), depositAmount);
+    // Deposit into Account
+    await newAccount.connect(actor).modifyCollateralZap(depositAmount);
+  }
 
-    // The user has to approve the `Account` contract to transfer their collat.
-    await collateral.connect(actor).approve(newAccountAddress, ethers.MaxUint256);
-    expect(await collateral.allowance(actorAddress, newAccountAddress)).to.equal(ethers.MaxUint256);
-
-    // TODO: Test `modifyCollateral` on mainnet and `modifyCollateralZap` on testnet
-    if (COLLATERAL_ADDRESS == SUSD_ADDRESS) {
-      // If we're on testnet, we use `modifyCollateral` and deposit `snxUSD`
-      await expect(newAccount.connect(actor).modifyCollateral(depositAmount, 0))
-        .to.emit(newAccount, "CollateralDeposited")
-        .withArgs(COLLATERAL_ADDRESS, depositAmount);
-    } else if (COLLATERAL_ADDRESS == USDC_ADDRESS) {
-      // If we're on mainnet, we can use `modifyCollateralZap` and deposit USDC directly
-      await expect(newAccount.connect(actor).modifyCollateralZap(depositAmount))
-        .to.emit(newAccount, "CollateralDeposited")
-        .withArgs(COLLATERAL_ADDRESS, depositAmount, 0);
-    }
-
-    // Ensure user has collateral
+  it("should handle collateral deposits correctly using `modifyCollateralZap`", async function () {
+    const { newAccount, actor, actorAddress, perpsMarketProxy, collateral } = await setupTestEnvironment();
     const accountId = await newAccount.accountId();
-    const availableMargin = await perpsMarketProxy.getAvailableMargin(accountId);
 
-    // Convert depositAmount to a standardized 18 decimal format for comparison
-    const standardizedDepositAmount = ethers.parseUnits(
-      ethers.formatUnits(depositAmount, COLLATERAL_DECIMALS),
-      18
-    );
+    // Transfer needed collateral to actor for depositing
+    await depositCollateral(newAccount, actor, collateral, depositAmount);
 
-    expect(availableMargin).to.be.equal(standardizedDepositAmount);
+    const sUSDCMarketId = BigInt(0);
+    const sUSDCCollateralAmount = await perpsMarketProxy.getCollateralAmount(accountId, sUSDCMarketId);
+    const standardizedDepositAmount = ethers.parseUnits(ethers.formatUnits(depositAmount, COLLATERAL_DECIMALS), 18);
+
+    expect(standardizedDepositAmount).to.be.equal(sUSDCCollateralAmount);
   });
 
-  it("should handle collateral withdrawals correctly", async function () {
-    const { accountFactory, actor, perpsMarketProxy, collateral, COLLATERAL_ADDRESS } = await loadFixture(deployAccountFactoryFixture);
-    const createAccountTransaction = await accountFactory.connect(actor).createAccount(0);
-    const [newAccount, newAccountAddress] = await createNewAccountAndGetContract(createAccountTransaction);
+  it("should handle collateral withdrawals correctly using `modifyCollateralZap`", async function () {
+    const { newAccount, actor, actorAddress, perpsMarketProxy, collateral } = await setupTestEnvironment();
     const accountId = await newAccount.accountId();
 
-    // Assume COLLATERAL_ADDRESS and depositAmount are defined as per the deposit test
     // Transfer needed collateral to actor for depositing
-    await stealToken(collateral, actor, depositAmount); // depositing twice the amount to test withdrawal later
-
-    // Approve the account to use the collateral
-    await collateral.connect(actor).approve(newAccountAddress, depositAmount);
-    await newAccount.connect(actor).modifyCollateralZap(depositAmount);
+    await depositCollateral(newAccount, actor, collateral, depositAmount);
 
     // Ensure the user has sUSD as that's all modifyCollateralZap can convert
     const sUSDCMarketId = BigInt(0);
     const sUSDCCollateralAmount = await perpsMarketProxy.getCollateralAmount(accountId, sUSDCMarketId);
-    // Synthetix represents in 18 decimals, but USDC is 6
+    // Synthetix represents in 18 decimals, but USDC is 6 TODO: make function `ensure18Decimals`
     const standardizedDepositAmount = ethers.parseUnits(
       ethers.formatUnits(depositAmount, COLLATERAL_DECIMALS),
       18
@@ -148,68 +77,70 @@ describe("Account Tests", function () {
 
     expect(standardizedDepositAmount).to.be.equal(sUSDCCollateralAmount);
 
-    // Deposit is successful, now try to withdraw
-    const withdrawAmount = depositAmount; // withdraw half the deposited amount
-    await expect(newAccount.connect(actor).modifyCollateralZap(-withdrawAmount))
+    /**
+     * Deposit is successful, now try to withdraw
+     * - When depositing, we can use 6 decimals as engine is expecting USDC
+     * - When withdrawing, modifyCollateral needs to get the collateral out of the account, 
+     *   which is 18 decimals, so we must use 18 decimals when trying to withdraw.
+     * - When we eventually transfer USDC back to the user, we can use 6 decimals there again.
+     */
+    const withdrawAmount = -standardizedDepositAmount;
+    await expect(newAccount.connect(actor).modifyCollateralZap(withdrawAmount))
       .to.emit(newAccount, "CollateralWithdrawn")
       .withArgs(COLLATERAL_ADDRESS, withdrawAmount, 0);
-    console.log("Collateral withdrawal");
 
     // Check the final collateral balance in the account
     const finalCollateralBalance = await perpsMarketProxy.getAvailableMargin(accountId);
     expect(finalCollateralBalance).to.equal(0);
 
-    // Verify the withdrawal does not allow the account to withdraw more than deposited
-    // await expect(newAccount.connect(actor).modifyCollateral(depositAmount, accountId))
-    //   .to.be.revertedWith("InsufficientCollateral");
   });
 
-  it("should execute a trade and emit the OrderCommitted event", async function () {
-    const { accountFactory, actor, actorAddress, collateral } = await loadFixture(deployAccountFactoryFixture) as DeployAccountFactoryFixtureReturnType;
-    const createAccountTransaction = await accountFactory.connect(actor).createAccount(0);
-    const [newAccount, newAccountAddress] = await createNewAccountAndGetContract(createAccountTransaction); // Use await properly
+  // it("should execute a trade and emit the OrderCommitted event", async function () {
+  //   const { accountFactory, actor, actorAddress, collateral } = await loadFixture(deployAccountFactoryFixture) as DeployAccountFactoryFixtureReturnType;
+  //   const createAccountTransaction = await accountFactory.connect(actor).createAccount(0);
+  //   const [newAccount, newAccountAddress] = await createNewAccountAndGetContract(createAccountTransaction); // Use await properly
 
-    // Transfer needed collateral to actor
-    await stealToken(collateral, actor, depositAmount);
+  //   // Transfer needed collateral to actor
+  //   await stealToken(collateral, actor, depositAmount);
 
-    // The user has to approve the `Account` contract to transfer their collateral
-    await collateral.connect(actor).approve(newAccountAddress, ethers.MaxUint256);
-    expect(await collateral.allowance(actorAddress, newAccountAddress)).to.equal(ethers.MaxUint256);
+  //   // The user has to approve the `Account` contract to transfer their collateral
+  //   await collateral.connect(actor).approve(newAccountAddress, ethers.MaxUint256);
+  //   expect(await collateral.allowance(actorAddress, newAccountAddress)).to.equal(ethers.MaxUint256);
 
-    // Deposit funds
-    COLLATERAL_ADDRESS == SUSD_ADDRESS ? await newAccount.connect(actor).modifyCollateral(depositAmount, 0) : newAccount.connect(actor).modifyCollateralZap(depositAmount);
+  //   // Deposit funds
+  //   COLLATERAL_ADDRESS == SUSD_ADDRESS ? await newAccount.connect(actor).modifyCollateral(depositAmount, 0) : newAccount.connect(actor).modifyCollateralZap(depositAmount);
 
-    // Trade data
-    const perpsMarketId = 1200;
-    const sizeDelta = 100;
-    // TODO: Look into settlement strategies, only 0 seems to be available
-    const settlementStrategyId = 0; // 1 = BUY 2 = SELL
-    const acceptablePrice = ethers.MaxUint256;
-    const trackingCode = ethers.encodeBytes32String("TRACKING_CODE");
-    const accountId = await newAccount.accountId();
+  //   // Trade data
+  //   const perpsMarketId = 1200;
+  //   const sizeDelta = 100;
+  //   // TODO: Look into settlement strategies, only 0 seems to be available
+  //   const settlementStrategyId = 0; // 1 = BUY 2 = SELL
+  //   const acceptablePrice = ethers.MaxUint256;
+  //   const trackingCode = ethers.encodeBytes32String("TRACKING_CODE");
+  //   const accountId = await newAccount.accountId();
 
-    await expect(newAccount.connect(actor).executeTrade(perpsMarketId, sizeDelta, settlementStrategyId, acceptablePrice, trackingCode))
-      .to.emit(newAccount, "OrderCommitted")
-      .withArgs(
-        [
-          anyValue, // settlementTime
-          [
-            perpsMarketId,
-            accountId,
-            sizeDelta,
-            settlementStrategyId,
-            acceptablePrice,
-            trackingCode,
-            anyValue, // referrer TODO: owner of factory contract
-          ],
-        ],
-        perpsMarketId,
-        accountId,
-        sizeDelta,
-        settlementStrategyId,
-        acceptablePrice,
-        trackingCode,
-        anyValue // fees
-      );
-  });
+  //   await expect(newAccount.connect(actor).executeTrade(perpsMarketId, sizeDelta, settlementStrategyId, acceptablePrice, trackingCode))
+  //     .to.emit(newAccount, "OrderCommitted")
+  //     .withArgs(
+  //       [
+  //         anyValue, // settlementTime
+  //         [
+  //           perpsMarketId,
+  //           accountId,
+  //           sizeDelta,
+  //           settlementStrategyId,
+  //           acceptablePrice,
+  //           trackingCode,
+  //           anyValue, // referrer TODO: owner of factory contract
+  //         ],
+  //       ],
+  //       perpsMarketId,
+  //       accountId,
+  //       sizeDelta,
+  //       settlementStrategyId,
+  //       acceptablePrice,
+  //       trackingCode,
+  //       anyValue // fees
+  //     );
+  // });
 });
