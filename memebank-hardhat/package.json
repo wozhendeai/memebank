@@ -10,7 +10,7 @@
     "test:testnet": "set TESTNET=TRUE&& npx hardhat test --network localhost",
     "node:mainnet": "npx hardhat node --fork https://api.developer.coinbase.com/rpc/v1/base/lzSHv83ZGfiUFE_YizE9vhXlAsViU7eE",
     "test:mainnet": "set TESTNET=FALSE&& npx hardhat test --network localhost",
-    "deploy:mainnet": "npx hardhat ignition deploy ./ignition/modules/AccountFactory.t.ts --network base"
+    "deploy:mainnet": "set TESTNET=FALSE&& npx hardhat ignition deploy ./ignition/modules/AccountFactory.t.ts --network base"
   },
   "author": "",
   "license": "ISC",
