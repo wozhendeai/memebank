@@ -34,7 +34,6 @@ export async function stealToken(collateral: IERC20, actor: Signer, amount: BigN
 
 export async function stealTokenCustomWhale(collateral: IERC20, actor: Signer, amount: BigNumberish, WHALE_ADDRESS: string) {
     const actorAddress = await actor.getAddress();
-    const actorBalanceOfCollateral = await collateral.balanceOf(actor);
 
     // Impersonate the collateral whale account
     await setBalance(WHALE_ADDRESS, 100n ** 18n);
