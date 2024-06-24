@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
@@ -73,6 +74,14 @@ const data = [
 
 const HomePage = () => {
   const { accounts, totalBalance, isLoading, } = useAccountData();
+  const [showZeroBalance, setShowZeroBalance] = useState(false);
+
+  const toggleZeroBalanceVisibility = () => {
+    setShowZeroBalance(!showZeroBalance);
+  };
+
+  // Filter accounts based on balance and visibility toggle
+  const visibleAccounts = showZeroBalance ? accounts : accounts.filter(account => account.totalBalance !== "0");
 
   return (
     <Root>
@@ -86,7 +95,7 @@ const HomePage = () => {
             ${totalBalance}
           </Typography>
           <Typography variant="subtitle2" color="textSecondary">
-            This month you’ve saved $2,899 so far. <span style={{ color: 'green' }}>(25% more than last month)</span>
+            This month your savings have changed by $2,899. <span style={{ color: 'green' }}>(25% more than last month)</span>
           </Typography>
         </Box>
         {/* Savings Graph */}
@@ -134,10 +143,10 @@ const HomePage = () => {
         {/* Graph Buttons */}
         <Box width="100%" mb={2} display="flex" justifyContent="center">
           <ButtonGroup fullWidth variant="outlined">
+            <Button sx={{ flex: 1 }}>1D</Button>
+            <Button sx={{ flex: 1 }}>1W</Button>
             <Button sx={{ flex: 1 }}>1M</Button>
             <Button sx={{ flex: 1 }}>3M</Button>
-            <Button sx={{ flex: 1 }}>6M</Button>
-            <Button sx={{ flex: 1 }}>1Y</Button>
           </ButtonGroup>
         </Box>
 
@@ -162,7 +171,7 @@ const HomePage = () => {
               </Grid>
             ))
           ) : (
-            accounts.map(account => (
+            visibleAccounts.map(account => (
               <Grid item xs={12} sm={6} key={account.address}>
                 <HomeAccountCard
                   address={account.address}
@@ -174,6 +183,14 @@ const HomePage = () => {
             ))
           )}
         </Grid>
+        {/* Show hidden comments */}
+        <Button
+          variant="text"
+          onClick={toggleZeroBalanceVisibility}
+          sx={{ marginBottom: 2 }}
+        >
+          {showZeroBalance ? 'Hide Zero Balance Accounts' : 'Show Zero Balance Accounts'}
+        </Button>
       </Content>
 
       <HomeNavbar />

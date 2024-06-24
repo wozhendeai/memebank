@@ -5,6 +5,11 @@ import { contracts } from '../contracts/contracts';
 import { base } from 'viem/chains';
 import { ComponentAccountType } from '../types';
 
+/**
+ * Predicts the account address the user would generate
+ * @param selectedAccountType The account strategy the user wants
+ * @returns 
+ */
 export const useNewAccountAddress = (selectedAccountType: ComponentAccountType) => {
     const [newAccountAddress, setNewAccountAddress] = useState<`0x${string}` | null>(null);
     const [loading, setLoading] = useState(false);

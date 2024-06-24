@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { Box, Typography, Paper, IconButton, Menu, MenuItem, Tooltip } from '@mui/material';
+import { Box, Typography, Paper, IconButton, Menu, MenuItem, Modal } from '@mui/material';
 import { styled } from '@mui/system';
-import { QuestionMark, Settings } from '@mui/icons-material';
+import { Settings } from '@mui/icons-material';
 import { AccountData, accountTypes } from '../../types';
-import { useReadContract } from 'wagmi';
-import { contracts } from '../../contracts/contracts';
+import AccountActionForm from '../AccountActionForm/AccountActionForm';
 
 const AccountCardContainer = styled(Paper)(({ theme }) => ({
     padding: theme.spacing(3),
@@ -22,18 +21,24 @@ const AccountCardContainer = styled(Paper)(({ theme }) => ({
     },
 }));
 
-const HomeAccountCard = ({ accountId, totalBalance, strategyType }: AccountData) => {
+const ModalContainer = styled(Box)`
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 500px;
+    background-color: ${({ theme }) => theme.palette.background.paper};
+    border-radius: ${({ theme }) => theme.shape.borderRadius * 2}px;
+    box-shadow: 24;
+    padding: ${({ theme }) => theme.spacing(4)};
+    box-sizing: border-box;
+`;
+
+const HomeAccountCard = ({ address: accountAddress, accountId, totalBalance, strategyType }: AccountData) => {
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-    const { data: openPositionsData, } = useReadContract({
-        address: contracts.PerpsMarketProxy.address,
-        abi: contracts.PerpsMarketProxy.abi,
-        functionName: "getAccountOpenPositions",
-        args: [accountId],
-        query: {
-            enabled: !!accountId
-        }
-    })
-    console.log(openPositionsData);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [actionType, setActionType] = useState<'deposit' | 'withdraw'>('deposit');
 
     const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorEl(event.currentTarget);
@@ -43,21 +48,24 @@ const HomeAccountCard = ({ accountId, totalBalance, strategyType }: AccountData)
         setAnchorEl(null);
     };
 
-    const handleDeposit = () => {
-        // call `modifyCollateral`
+    const handleActionClick = (action: 'deposit' | 'withdraw') => {
+        setActionType(action);
+        setModalOpen(true);
+        handleMenuClose();
+    };
 
-    }
+    const handleModalClose = () => {
+        setModalOpen(false);
+    };
 
-    const handleWithdraw = () => {
-        // Get all positions
-
-        // If any, close all positions
-
-        // Withdraw collaterall
-    }
+    const handleActionSuccess = () => {
+        // Handle successful action (e.g., refresh balance)
+        handleModalClose();
+    };
 
     return (
         <>
+            {/* Display Accounts */}
             <AccountCardContainer>
                 <Box display="flex" justifyContent="space-between">
                     <Typography variant="h6">{accountTypes[strategyType].title}</Typography>
@@ -70,29 +78,30 @@ const HomeAccountCard = ({ accountId, totalBalance, strategyType }: AccountData)
                     Some more details here
                 </Typography>
             </AccountCardContainer>
+            {/* Deposit, Withdraw  */}
             <Menu
                 anchorEl={anchorEl}
                 open={Boolean(anchorEl)}
                 onClose={handleMenuClose}
             >
-                {/* TODO: Fix tooltips */}
-                <MenuItem onClick={handleDeposit}>
+                <MenuItem onClick={() => handleActionClick('deposit')}>
                     Deposit
-                    <Tooltip disableFocusListener title="Deposit into strategy" placement="top-start">
-                        <IconButton>
-                            <QuestionMark />
-                        </IconButton>
-                    </Tooltip>
                 </MenuItem>
-                <MenuItem onClick={handleWithdraw}>
+                <MenuItem onClick={() => handleActionClick('withdraw')}>
                     Withdraw
-                    <Tooltip disableFocusListener title="Withdraw from strategy" placement="top-start">
-                        <IconButton>
-                            <QuestionMark />
-                        </IconButton>
-                    </Tooltip>
                 </MenuItem>
             </Menu>
+            <Modal open={modalOpen} onClose={handleModalClose}>
+                <ModalContainer>
+                    <AccountActionForm
+                        accountAddress={accountAddress}
+                        accountId={accountId}
+                        action={actionType}
+                        onSuccess={handleActionSuccess}
+                        onCancel={handleModalClose}
+                    />
+                </ModalContainer>
+            </Modal>
         </>
     );
 };

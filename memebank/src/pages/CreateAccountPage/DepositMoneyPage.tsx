@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Container, Box, Paper, TextField, Button, InputAdornment, Typography, Modal, CircularProgress } from '@mui/material';
 import { styled } from '@mui/system';
 import { useAccount, useSwitchChain, } from 'wagmi';
@@ -130,7 +130,6 @@ const DepositMoneyPage = ({ selectedAccountType }: { selectedAccountType: Compon
         }
     };
 
-
     const handleCloseConfirmedModal = () => {
         setConfirmedModalOpen(false);
         navigate('/home', { replace: true });
@@ -175,12 +174,13 @@ const DepositMoneyPage = ({ selectedAccountType }: { selectedAccountType: Compon
         }
     };
 
-    // TODO: Redirect to homescreen
     // TODO: Test when we update contracts [when we add strategy types]
-    // useEffect(() => {
-    //     console.log(`newAccountAddressError: ` + newAccountAddressError)
-    //     console.log(`write error: ` + error)
-    // }, [error, newAccountAddressError]);
+    useEffect(() => {
+        if (isSuccess) {
+            console.log('Transaction confirmed:', callsStatus?.receipts);
+            setConfirmedModalOpen(true);
+        }
+    }, [isSuccess, callsStatus?.receipts ]);
 
     return (
         <Root>
@@ -252,9 +252,13 @@ const DepositMoneyPage = ({ selectedAccountType }: { selectedAccountType: Compon
                     >
                         {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Create Account'}
                     </Button>
-                    <Typography variant="body2" color="textSecondary">
-                        {callsStatus && <div> Status: {callsStatus.status}</div>}
-                    </Typography>
+                    <Box mt={2}>
+                        {isSuccess && (
+                            <Typography variant="body2" color="success.main">
+                                Transaction successful!
+                            </Typography>
+                        )}
+                    </Box>
                 </ModalContainer>
             </Modal>
             {/* Transaction Confirmed Modal TODO: Make flow better*/}

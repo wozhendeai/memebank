@@ -35,7 +35,7 @@ const useAccountData = () => {
                 totalBalance: formatUnits(account.totalBalance, 18),  // Format from BigInt to human-readable string
                 strategyType: account.strategyType
             }));
-    
+            
             setAccounts(formattedAccounts);
                 // Calculate the total balance
             const total = formattedAccounts.reduce((acc, account) => acc + parseFloat(account.totalBalance), 0);
