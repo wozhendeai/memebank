@@ -52,6 +52,7 @@ contract Account is Ownable {
         uint256 fees
     );
 
+    // TODO: AccountFactory and Account should have same order of params
     constructor(
         IPerpsMarketProxy _perpsMarketProxy,
         IEngine _engine,
@@ -153,14 +154,14 @@ contract Account is Ownable {
     }
 
     function modifyCollateralZap(int256 amount) external payable onlyOwner {
-        require(!(amount == 0), "Amount cannot be zero");
+        require(amount != 0, "Amount cannot be zero");
         if (amount > 0) {
             // Deposit into Kwenta
             emit CollateralDeposited(address(USDC), amount, strategyType);
 
             // Check if the sender has enough USDC to send
             require(
-                int256(USDC.balanceOf(msg.sender)) >= amount,
+                USDC.balanceOf(msg.sender) >= uint256(amount),
                 "Insufficient funds, click the gear icon to top up your USDC balance using Coinbase."
             );
 
@@ -192,7 +193,7 @@ contract Account is Ownable {
             // Make amount positive to see if they have the collateral amount they're trying to withdraw
             // TODO: Do this more like engine/perpsMarketProxy
             require(
-                collateralAmount >= uint256(amount.abs256()),
+                collateralAmount >= amount.abs256(),
                 "Insufficient collateral for withdrawal"
             );
 
