@@ -11,7 +11,6 @@ import { config } from './wagmi.ts'
 // Pages
 import LandingPage from './pages/LandingPage/LandingPage.tsx';
 import HomePage from './pages/HomePage/HomePage.tsx';
-import CreateAccountPage from './pages/CreateAccountPage/CreateAccountPage.tsx';
 import { createTheme, ThemeProvider } from '@mui/material';
 
 const router = createBrowserRouter([
@@ -22,10 +21,6 @@ const router = createBrowserRouter([
   {
     path: "/home",
     element: <HomePage />
-  },
-  {
-    path: "/create",
-    element: <CreateAccountPage />
   }
 ]);
 

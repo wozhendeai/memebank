@@ -82,7 +82,7 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ isOpen, toggleDrawer })
     const handleCopyAddress = () => {
         if (address) {
             navigator.clipboard.writeText(address);
-            // You might want to add a toast notification here
+            // TODO: add a toast notification here
         }
     };
 
