@@ -1,12 +1,10 @@
 import { useState, MouseEvent, KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Paper, styled, Box, IconButton } from '@mui/material';
-import { SwipeableDrawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Divider } from '@mui/material';
-import LogoutIcon from '@mui/icons-material/Logout';
 import HomeIcon from '@mui/icons-material/Home';
 import AddIcon from '@mui/icons-material/Add';
 import MenuIcon from '@mui/icons-material/Menu';
-import { useDisconnect } from 'wagmi';
+import SettingsDrawer from './SettingsDrawer';
 
 const Navigation = styled(Box)(({ theme }) => ({
     display: 'flex',
@@ -15,48 +13,6 @@ const Navigation = styled(Box)(({ theme }) => ({
     backgroundColor: '#fff',
 }));
 
-const SettingsDrawer = ({ isOpen, toggleDrawer }: { isOpen: boolean, toggleDrawer: (open: boolean) => (event: KeyboardEvent | MouseEvent) => void }) => {
-    const navigate = useNavigate();
-    const { disconnect } = useDisconnect()
-
-    // We shouldn't have to check if a user is disconnected as they shouldn't be on this page
-    const handleLogout = () => {
-        disconnect();
-        navigate('/');
-    };
-
-    const drawerList = () => (
-        <Box
-            sx={{ width: 250 }}
-            role="presentation"
-            onClick={toggleDrawer(false)}
-            onKeyDown={toggleDrawer(false)}
-        >
-            <List>
-                <ListItem key="logout" disablePadding>
-                    <ListItemButton onClick={handleLogout}>
-                        <ListItemIcon>
-                            <LogoutIcon />
-                        </ListItemIcon>
-                        <ListItemText primary="Logout" />
-                    </ListItemButton>
-                </ListItem>
-            </List>
-            <Divider />
-        </Box>
-    );
-
-    return (
-        <SwipeableDrawer
-            anchor="bottom"
-            open={isOpen}
-            onClose={toggleDrawer(false)}
-            onOpen={toggleDrawer(true)}
-        >
-            {drawerList()}
-        </SwipeableDrawer>
-    );
-};
 
 function HomeNavbar() {
     const navigate = useNavigate();

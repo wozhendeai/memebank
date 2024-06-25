@@ -189,7 +189,7 @@ const HomePage = () => {
           onClick={toggleZeroBalanceVisibility}
           sx={{ marginBottom: 2 }}
         >
-          {showZeroBalance ? 'Hide Zero Balance Accounts' : 'Show Zero Balance Accounts'}
+          {showZeroBalance ? 'Hide Accounts' : 'Show Hidden Accounts'}
         </Button>
       </Content>
 
