@@ -7,7 +7,7 @@ export const client = createPublicClient({
   transport: http(), 
 }) 
 
-export const accountFactory = getContract({
+export const accountFactoryContract = getContract({
   address: contracts.PerpsMarketProxy.address,
   abi: contracts.PerpsMarketProxy.abi,
   client: client,

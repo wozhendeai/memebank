@@ -27,3 +27,8 @@ model BalanceHistory {
 
   @@index([accountId, contractAddress])
 }
+
+model Checkpoint {
+  name  String @id
+  value String
+}

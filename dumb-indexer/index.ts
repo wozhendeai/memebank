@@ -6,10 +6,11 @@ import balanceRoutes from './routes/balances.ts';
 import { createAccount, getAccounts } from './services/accountService.ts';
 import { createBalanceHistory } from './services/balanceService.ts';
 import { contracts } from "./contracts/contracts.ts";
-import { client, accountFactory } from "./viemClient.ts";
+import { client, accountFactoryContract } from "./viemClient.ts";
 import { getAvailableMargin } from "./utils/getAvailableMargin.ts";
 import { AccountCreatedLog } from 'types.ts';
 import { Address } from 'viem';
+import { getLastProcessedBlock, processNewAccounts, saveLastProcessedBlock } from './services/checkpointService.ts';
 
 const PORT = 3000;
 const ETHEREUM_RPC_URL = "https://api.developer.coinbase.com/rpc/v1/base/lzSHv83ZGfiUFE_YizE9vhXlAsViU7eE";
@@ -17,13 +18,6 @@ const RETRY_INTERVAL = 60000; // 1 minute
 
 // Ethereum provider
 const provider = new ethers.JsonRpcProvider(ETHEREUM_RPC_URL);
-
-// Contract instances
-const accountFactoryContract = new ethers.Contract(
-    contracts.AccountFactory.address,
-    contracts.AccountFactory.abi,
-    provider
-);
 
 const perpsMarketProxy = new ethers.Contract(
     contracts.PerpsMarketProxy.address,
@@ -58,34 +52,45 @@ async function startIndexing() {
 
 // Tracks new accounts
 async function listenForNewAccounts() {
+    let lastProcessedBlock = await getLastProcessedBlock();
 
-    // TODO: Typed logs
-    const unwatch = accountFactory.watchEvent.AccountCreated({
-        onLogs: async (logs) => {
-          for (const log of logs) {
-            const [, account, creator] = log.topics;
-    
-            console.log(`New account created: ${account} by ${creator}`)
-    
-            try {
-              const newAccount = await createAccount(account as string, creator as string)
-              const balance = await getAvailableMargin(account as Address)
-              await createBalanceHistory(newAccount.id, contracts.PerpsMarketProxy.address, balance.toString())
-            } catch (error) {
-              console.error('Error processing new account:', error)
+    while (true) {
+        try {
+            const latestBlock = await client.getBlockNumber();
+
+            if (latestBlock > lastProcessedBlock) {
+                await processNewAccounts(lastProcessedBlock + 1n, latestBlock);
+                lastProcessedBlock = latestBlock;
+                await saveLastProcessedBlock(lastProcessedBlock);
             }
-          }
-        },
-        onError: (error: Error) => {
-          console.error('Error in event listener:', error)
-        }
-      })
-    
-    // Keep the function running
-    await new Promise(() => { })
 
-    // This line will never be reached, but it's here for completeness
-    unwatch()
+            // Set up a listener for new events
+            const unwatch = accountFactoryContract.watchEvent.AccountCreated({
+                onLogs: async (logs) => {
+                    for (const log of logs) {
+                        const account = log.topics[1];
+                        const creator = log.topics[2];
+                        const blockNumber = log.blockNumber as bigint;
+
+                        console.log(`New account created in real-time: ${account} by ${creator}`);
+                        try {
+                            await processNewAccounts(BigInt(blockNumber), BigInt(blockNumber));
+                            await saveLastProcessedBlock(BigInt(blockNumber));
+                        } catch (error) {
+                            console.error('Error processing new account:', error);
+                        }
+                    }
+                },
+                onError: (error) => console.error('Error in event listener:', error)
+            });
+
+            // Keep the function running
+            await new Promise(() => {});
+        } catch (error) {
+            console.error('Error in listenForNewAccounts:', error);
+            await new Promise(resolve => setTimeout(resolve, RETRY_INTERVAL));
+        }
+    }
 }
 
 // Express app
